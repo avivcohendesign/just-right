@@ -96,7 +96,7 @@ body.dense .zoomer:hover{opacity:1}
 body.harmony .zoomer{opacity:0;pointer-events:none}
 .cell{position:relative}
 .tile{
-  position:absolute;inset:4.6%;background:var(--tile);
+  position:absolute;inset:var(--iy,4.6%) var(--ix,4.6%);background:var(--tile);
   cursor:ew-resize;touch-action:none;outline:none;
   transition:opacity 900ms ease;
 }
@@ -966,12 +966,19 @@ function relapse() {
 /* the field keeps square cells; its outline follows c × r */
 function sizeFrame() {
   const { c, r } = LV();
-  // the field fills the screen as far as it can without cutting any row or column off
-  const cell = Math.min(innerWidth / c, innerHeight / r);
-  frame.style.width = `${cell * c}px`;
-  frame.style.height = `${cell * r}px`;
-  frame.style.left = `${(innerWidth - cell * c) / 2}px`;
-  frame.style.top = `${(innerHeight - cell * r) / 2}px`;
+  // the same margin on every side — top, bottom, left, right. Tiles stay square; if the screen's
+  // proportions don't match the board's, the gaps between them give a little instead.
+  const W = innerWidth, H = innerHeight, M = Math.max(24, Math.round(Math.min(W, H) * .045)), g = .101;
+  const S = Math.min((W - 2 * M) / (c + (c - 1) * g), (H - 2 * M) / (r + (r - 1) * g));
+  const gx = (W - 2 * M - c * S) / (c - 1), gy = (H - 2 * M - r * S) / (r - 1);
+  const cw = S + gx, ch = S + gy;
+  frame.style.width = `${cw * c}px`;
+  frame.style.height = `${ch * r}px`;
+  frame.style.left = `${M - gx / 2}px`;
+  frame.style.top = `${M - gy / 2}px`;
+  frame.style.setProperty('--ix', `${(gx / 2).toFixed(2)}px`);
+  frame.style.setProperty('--iy', `${(gy / 2).toFixed(2)}px`);
+  const cell = S / (1 - .092);
   frame.style.setProperty('--m', `${(cell * .36).toFixed(1)}px`);    // marks sit the same distance out on every side
   frame.style.setProperty('--ms', `${(cell * .18).toFixed(1)}px`);
 }
