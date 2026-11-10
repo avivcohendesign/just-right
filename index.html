@@ -500,7 +500,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 // one board. seventy shapes. every one is tied to exactly one other —
 // and the ties close into a single loop, so nothing can be fixed alone.
 const LEVELS = [
-  { c: 10, r: 6, k: .58, n: 1, tol: .009 }   // sixty shapes
+  { c: 10, r: 7, k: .58, n: 1, tol: .009 }   // seventy shapes: one row more than feels reasonable
 ];
 const levelDef = i => LEVELS[Math.min(i, LEVELS.length - 1)];
 const LV = () => levelDef(state.level);
@@ -1407,7 +1407,7 @@ setInterval(() => {
 }, 1000);
 
 /* ======================================================
-   The archive — everyone who sat in front of these same sixty shapes.
+   The archive — everyone who sat in front of these same seventy shapes.
    Real visitors are kept in this browser; around them, six hundred demo
    visitors (simulated, marked "demo"), so it is never empty.
    ====================================================== */
