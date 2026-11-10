@@ -1,0 +1,2610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Just Right</title>
+<style>
+:root{
+  --bg:#F1EFEA;
+  --tile:#FFFFFF;
+  --ink:#141414;
+  --mute:#8C8981;
+  --hair:rgba(20,20,20,.07);
+  --blue:#1D3FD8;
+  --red:#E2341D;
+  --green:#0E9F6E;
+  --black:#141414;
+  --yellow:#F2B705;
+  --orange:#F26B1D;
+  --violet:#5B3FC4;
+  --teal:#0F8A86;
+  --pink:#E8619E;
+  --navy:#14246B;
+  --ochre:#B8862B;
+  --grey:#A3A098;
+  --lime:#8DBF2E;
+  --sky:#3FA9F5;
+  --crimson:#B0123B;
+  --coral:#FF7A5C;
+  --magenta:#C2188F;
+  --forest:#1F6B3A;
+  --aqua:#1FBFC4;
+  --plum:#6B2A6E;
+  --mustard:#D9A400;
+  --cobalt:#0050B8;
+  --rose:#F28CA8;
+  --rust:#A8461C;
+  --lilac:#A98BE0;
+  --mint:#6FD6AE;
+  --olive:#7A8424;
+  --peach:#FFB27A;
+  --S:min(68vh, 84vw, 700px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow:hidden;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;
+}
+
+/* ---------- Gallery chrome ---------- */
+.chrome{position:fixed;font-size:11px;letter-spacing:.07em;text-transform:uppercase;line-height:1.55;transition:opacity 1100ms ease;z-index:2;pointer-events:none}
+.tl{top:32px;left:36px}
+.tr{top:32px;right:36px;text-align:right}
+.bl{bottom:32px;left:36px}
+.br{bottom:32px;right:36px;text-align:right}
+.bc{bottom:38px;left:50%;transform:translateX(-50%);color:var(--mute);text-transform:none;letter-spacing:.01em;font-size:12px;white-space:nowrap;transition:opacity 1200ms ease}
+.title{font-weight:700;letter-spacing:.16em}
+.label{color:var(--mute)}
+.big{font-size:26px;font-weight:500;letter-spacing:-.01em;text-transform:none;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:5px}
+.big span{color:var(--mute);font-weight:400}
+.num{font-variant-numeric:tabular-nums}
+.bar{width:168px;height:2px;background:var(--hair);margin-top:12px;position:relative;overflow:hidden}
+.bar i{position:absolute;top:0;bottom:0;left:0;width:0;background:var(--ink);transition:width 350ms ease,background 350ms ease}
+.bar.full i{background:var(--green)}
+.row{display:flex;gap:28px;justify-content:flex-end}
+.row div{min-width:72px}
+
+/* ---------- Stage ---------- */
+.stage{position:fixed;inset:0;overflow:hidden}
+.frame{position:absolute;width:var(--S);height:var(--S)}
+.frame{--m:36px;--ms:18px}
+.mark{display:none !important}   /* the field runs past the edges — there is no frame to mark */
+.mark{position:absolute;width:var(--ms);height:var(--ms);border:0 solid var(--ink);opacity:.5;transition:opacity 1100ms ease;pointer-events:none}
+.mark.a{top:calc(var(--m) * -1);left:calc(var(--m) * -1);border-width:1.5px 0 0 1.5px}
+.mark.b{top:calc(var(--m) * -1);right:calc(var(--m) * -1);border-width:1.5px 1.5px 0 0}
+.mark.c{bottom:calc(var(--m) * -1);left:calc(var(--m) * -1);border-width:0 0 1.5px 1.5px}
+.mark.d{bottom:calc(var(--m) * -1);right:calc(var(--m) * -1);border-width:0 1.5px 1.5px 0}
+
+#grid{position:absolute;inset:0;display:grid;transform-origin:0 0;will-change:transform}
+.view{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
+.stage.zoomed{cursor:grab}
+.stage.panning,.stage.panning .tile{cursor:grabbing}
+
+/* zoom control */
+.zoomer{position:fixed;left:36px;bottom:32px;z-index:5;display:flex;flex-direction:row;align-items:center;gap:8px;transition:opacity 1600ms ease;opacity:0;pointer-events:none}
+body.dense .zoomer{opacity:.4;pointer-events:auto}
+body.dense .zoomer:hover{opacity:1}
+.zoomer button{width:36px;height:36px;border-radius:50%;border:1px solid rgba(20,20,20,.18);background:var(--bg);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0;transition:border-color 250ms,background 250ms,color 250ms}
+.zoomer button:hover{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.zoomer button:focus-visible{outline:1.5px solid var(--ink);outline-offset:3px}
+.zoomer svg{width:14px;height:14px}
+.zread{font-size:10px;letter-spacing:.08em;color:var(--mute);font-variant-numeric:tabular-nums;min-width:36px;text-align:center}
+.zoomer .zreset{font:500 9px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:.06em}
+body.harmony .zoomer{opacity:0;pointer-events:none}
+.cell{position:relative}
+.tile{
+  position:absolute;inset:4.6%;background:var(--tile);
+  cursor:ew-resize;touch-action:none;outline:none;
+  transition:opacity 900ms ease;
+}
+.cell.enter .tile{opacity:0;transition:none}
+.tile svg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;overflow:visible}
+.tile::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px var(--hair);transition:box-shadow 300ms ease}
+.tile:hover::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,.16)}
+.tile.echo::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,.5)}
+.tile.echo svg{animation:twitch 260ms ease infinite alternate}
+@keyframes twitch{to{transform:translateX(.6px)}}
+.tile.active::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,.38)}
+.tile:focus-visible::after{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.tile::before{display:none}
+.tile.snap svg{animation:settle 560ms cubic-bezier(.2,.7,.2,1)}
+@keyframes settle{0%{transform:scale(1)}28%{transform:scale(.982)}100%{transform:scale(1)}}
+@keyframes snap{
+  0%  {opacity:0;box-shadow:0 0 0 0 rgba(14,159,110,0)}
+  12% {opacity:1;box-shadow:0 0 0 1.5px var(--green),0 0 22px rgba(14,159,110,.38)}
+  100%{opacity:0;box-shadow:0 0 0 1.5px var(--green),0 0 44px rgba(14,159,110,0)}
+}
+
+/* slider inside each tile (drawn in SVG so it scales with the zoom) */
+.trk{stroke:var(--ink);stroke-width:.5;opacity:.12;transition:opacity 250ms}
+.thumb{fill:var(--ink);opacity:.28;transition:opacity 250ms}
+.tile:hover .trk,.tile.active .trk{opacity:.3}
+.tile:hover .thumb,.tile.active .thumb{opacity:.85}
+.ok{display:none}
+/* a tile that is right loses its control — nothing left to fix */
+.tile.right .trk,.tile.right .thumb{opacity:0}
+.tile.right:hover .trk{opacity:.1}
+.tile.right:hover .thumb{opacity:.3}
+/* before anyone touches anything, one control quietly moves */
+.thumb{transform-box:fill-box}
+.tile.beckon .trk{opacity:.35}
+.tile.beckon .thumb{animation:beckon 2.6s ease-in-out infinite}
+@keyframes beckon{0%,100%{transform:translateX(0);opacity:.3}50%{transform:translateX(7px);opacity:.95}}
+
+/* ---------- Rituals: interruptions that block the field ---------- */
+.ritual{
+  --z:max(90px,16vmin);
+  position:fixed;inset:0;z-index:10;display:grid;place-items:center;
+  background:rgba(241,239,234,.76);-webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);
+  cursor:crosshair;touch-action:none;
+}
+.ritual[hidden]{display:none}
+.ritual::before{display:none}
+.r-box{text-align:center;max-width:min(640px,86vw);pointer-events:none}
+.r-label{display:none;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--red);font-variant-numeric:tabular-nums}
+.r-text{font-size:clamp(20px,2.2vw,28px);font-weight:500;letter-spacing:-.01em;line-height:1.2}
+.r-sub{font-size:13px;color:var(--mute);margin-top:10px;margin-left:3px;min-height:1.4em;transition:color 200ms}
+.r-sub.err{color:var(--ink);font-weight:500}
+.r-pips{display:none;gap:6px;justify-content:center;margin-top:30px}
+.r-pips i{width:8px;height:8px;border:1px solid var(--ink)}
+.r-pips i.on{background:var(--ink)}
+.r-box.shake{animation:shake 380ms cubic-bezier(.36,.07,.19,.97)}
+@keyframes shake{20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
+.r-mark{position:fixed;width:30px;height:30px;margin:-15px 0 0 -15px;border:1px solid var(--ink);opacity:.18;pointer-events:none;transition:opacity 150ms}
+.r-mark::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;background:var(--ink)}
+.r-mark.edge{width:0;height:38vh;margin:-19vh 0 0 0;border-width:0 0 0 1px}
+.r-mark.edge::after{width:7px;height:7px;margin:-3.5px 0 0 -4px}
+.r-mark.next{opacity:1}
+.r-mark.hit{animation:hit 320ms ease-out}
+@keyframes hit{0%{transform:scale(1.6);background:var(--ink)}100%{transform:scale(1)}}
+
+.r-svg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.r-svg text{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.ritual.interactive .r-box{position:fixed;top:9vh;left:0;right:0;margin:0 auto}
+.ritual.interactive .r-text{font-size:clamp(20px,2.2vw,28px)}
+
+/* ---------- Intro card ---------- */
+.intro{position:fixed;inset:0;z-index:12;display:grid;place-items:center;background:rgba(241,239,234,.9);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);transition:opacity 700ms ease}
+.intro.out{opacity:0;pointer-events:none}
+.intro-card{width:min(520px,86vw)}
+.intro .label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.intro h1{font-size:clamp(30px,4.4vw,48px);font-weight:500;letter-spacing:-.025em;line-height:1.04;margin:14px 0 30px}
+.intro ol{list-style:none;border-top:1px solid rgba(20,20,20,.14)}
+.intro li{display:grid;grid-template-columns:44px 1fr;gap:8px;padding:14px 0;border-bottom:1px solid rgba(20,20,20,.14);font-size:15px;line-height:1.45}
+.intro li span{font-size:11px;letter-spacing:.08em;color:var(--mute);font-variant-numeric:tabular-nums;padding-top:3px}
+.intro .demo-pair{display:flex;gap:10px;align-items:center;margin:30px 0 0}
+.intro .demo-pair svg{width:54px;height:54px;background:var(--tile);box-shadow:inset 0 0 0 1px var(--hair)}
+.intro .demo-pair i{font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.begin{margin-top:34px;display:inline-flex;align-items:center;gap:14px;background:var(--ink);color:var(--bg);border:0;padding:15px 22px 15px 24px;font:500 12px/1 "Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:background 250ms}
+.begin:hover{background:var(--blue)}
+.begin svg{width:16px;height:16px}
+
+/* ---------- Inner voice: a running log, like code ---------- */
+.log{
+  position:fixed;inset:20px;z-index:4;pointer-events:none;
+  font:12px/1.65 "SF Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:0;
+  display:flex;flex-direction:column;transition:opacity 1100ms ease;
+}
+/* no box: every line is printed straight over the field, on its own strip of paper */
+.log-head,.ln{width:fit-content;max-width:100%;background:rgba(241,239,234,.93);padding:0 7px;box-sizing:border-box}
+.log-head{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding-top:4px;padding-bottom:4px;margin-bottom:6px}
+.log-body{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;column-width:300px;column-gap:24px;column-fill:auto}
+.ln{display:grid;grid-template-columns:4.2ch auto;column-gap:1.4ch;white-space:pre-wrap;word-break:break-word;break-inside:avoid}
+.ln i{font-style:normal;color:var(--mute);opacity:.45;font-variant-numeric:tabular-nums}
+.ln.v > span{color:var(--ink);font-weight:600;letter-spacing:-.01em}
+.ln.v1 > span{color:var(--mute)}
+.ln.v2 > span{color:var(--ink);font-weight:600;padding-left:2ch}
+.ln.v2 > span::before{content:"\2192\00a0";font-weight:400;color:var(--mute)}
+.caret{display:inline-block;width:.6em;height:1.05em;vertical-align:-.15em;background:var(--ink);margin-left:1px;animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* thoughts as notes: dropped anywhere on the screen, each one can be closed */
+.notes{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity 1100ms ease}
+.note{
+  position:absolute;pointer-events:auto;box-sizing:border-box;cursor:default;
+  background:var(--bg);padding:7px 12px 10px;
+  box-shadow:0 0 0 1px rgba(20,20,20,.16),0 10px 24px -14px rgba(20,20,20,.35);
+  font:12px/1.6 "SF Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+.note-h{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:10px;color:var(--mute);margin-bottom:3px}
+.note-h i{font-style:normal;letter-spacing:.08em;opacity:.6;font-variant-numeric:tabular-nums}
+.note-x{border:0;background:none;padding:0 0 0 6px;margin:-2px -4px 0 0;font:15px/1 "SF Mono",ui-monospace,Menlo,monospace;color:var(--mute);cursor:pointer}
+.note-x:hover{color:var(--ink)}
+.note .ln{display:block;width:auto;max-width:none;background:none;padding:0;white-space:pre-wrap;word-break:break-word}
+body.harmony .notes{opacity:.12}
+body.harmony .log{opacity:.12}
+
+
+/* demo: skip to next stage */
+.skip{
+  position:fixed;right:36px;top:50%;transform:translateY(-50%);z-index:11;
+  width:44px;height:44px;border-radius:50%;border:1px solid rgba(20,20,20,.18);
+  background:transparent;color:var(--ink);cursor:pointer;display:grid;place-items:center;
+  transition:opacity 900ms ease,border-color 250ms ease,background 250ms ease,color 250ms ease;
+}
+.skip:hover{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.skip:focus-visible{outline:1.5px solid var(--ink);outline-offset:3px}
+.skip svg{width:16px;height:16px}
+.skip-label{z-index:11;position:fixed;right:36px;top:calc(50% + 34px);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);width:44px;text-align:center;transition:opacity 900ms ease;pointer-events:none}
+body.harmony .skip,body.harmony .skip-label{opacity:0;pointer-events:none}
+
+/* exhibition: the demo control exists only when asked for (D) */
+body.nodemo .skip,body.nodemo .skip-label{display:none}
+
+/* opening */
+.opening{position:fixed;inset:0;z-index:12;display:grid;place-items:center;background:var(--bg);transition:opacity 1800ms ease;cursor:default}
+.opening.out{opacity:0;pointer-events:none}
+.opening p{font-size:clamp(20px,2.2vw,28px);font-weight:500;letter-spacing:-.01em;opacity:0;animation:appear 1600ms 500ms ease forwards}
+@keyframes appear{to{opacity:1}}
+
+/* closing */
+.closing{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--bg);opacity:0;pointer-events:none;transition:opacity 2600ms ease}
+.closing.on{opacity:1;pointer-events:auto}
+.closing div{text-align:left}
+.closing p{opacity:0;transition:opacity 1600ms ease}
+.closing p.on{opacity:1}
+.closing .c1{font-size:14px;color:var(--mute)}
+.closing .c2{font-size:clamp(20px,2.2vw,28px);font-weight:500;letter-spacing:-.01em;margin:8px 0 0 3px}
+.closing .c3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:34px;font-variant-numeric:tabular-nums}
+
+/* the only number left: the time of day */
+.clock{position:fixed;right:20px;bottom:20px;z-index:4;background:rgba(241,239,234,.94);padding:6px 9px;font-size:11px;letter-spacing:.1em;color:var(--mute);font-variant-numeric:tabular-nums;pointer-events:none;transition:opacity 1100ms ease}
+body.harmony .clock{opacity:0}
+
+/* harmony: everything falls silent */
+body.harmony .chrome,body.harmony .mark{opacity:0}
+body.harmony .tile::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,0)}
+body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
+
+/* ---------- the question, before anything ---------- */
+.ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
+.ask.out{opacity:0;pointer-events:none}
+.ask-in{max-width:520px;padding:0 24px;opacity:0;animation:appear 1400ms 300ms ease forwards}
+.ask-q{font-size:clamp(20px,2.2vw,28px);font-weight:500;letter-spacing:-.01em}
+.ask-b{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.ask-b button{font:inherit;font-size:13px;background:var(--tile);border:0;padding:12px 16px;color:var(--ink);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(20,20,20,.06)}
+.ask-b button:hover{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue)}
+.ask-n{font-size:11px;color:var(--mute);margin-top:22px;line-height:1.5}
+.ask-name{display:block;margin-bottom:34px}
+.ask-name span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.ask-name input{font:inherit;font-size:18px;width:100%;background:transparent;border:0;border-bottom:1px solid var(--mute);padding:6px 0;color:var(--ink);outline:none}
+.ask-name input:focus{border-bottom-color:var(--blue)}
+.ask-name input::placeholder{color:var(--mute);opacity:.6}
+/* the archive, sorted by what people said */
+.arch-ocd{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:31;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.arch-ocd.on{opacity:1;pointer-events:auto}
+.arch-ocd button{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:9px 12px;color:var(--mute);cursor:pointer}
+.arch-ocd button.sel{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:var(--tile)}
+.arch-stat{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:31;font-size:11px;letter-spacing:.06em;color:var(--ink);background:var(--tile);padding:8px 12px;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;transition:opacity 500ms ease;pointer-events:none}
+.arch-stat.on{opacity:1}
+.archive.focus ~ .arch-ocd,.archive.focus ~ .arch-stat{opacity:0;pointer-events:none}
+/* ---------- the archive: hundreds of boards, the same sixty shapes, to wander through ---------- */
+.archive{position:fixed;inset:0;z-index:30;background:var(--bg);opacity:0;pointer-events:none;transition:opacity 1200ms ease;cursor:grab;touch-action:none}
+.archive.on{opacity:1;pointer-events:auto}
+.archive.panning{cursor:grabbing}
+.archive canvas{position:absolute;left:0;top:0;display:block}
+.arch-k{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.arch-h{font-size:clamp(22px,2.4vw,32px);font-weight:500;letter-spacing:-.015em;margin-top:10px;line-height:1.12}
+.arch-sub{font-size:clamp(15px,1.4vw,19px);color:var(--mute);margin-top:4px}
+.arch-hint{font-size:11px;color:var(--mute);margin-top:14px;letter-spacing:.02em}
+.arch-leave{position:fixed;right:36px;bottom:32px;z-index:31;font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:12px 18px;color:var(--ink);cursor:pointer;opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.arch-leave.on{opacity:1;pointer-events:auto}
+.arch-leave:hover{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue)}
+.arch-zoom{position:fixed;left:36px;bottom:32px;z-index:31;display:flex;gap:6px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.arch-zoom.on{opacity:1;pointer-events:auto}
+.arch-zoom button{font:inherit;font-size:13px;width:34px;height:34px;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);color:var(--ink);cursor:pointer}
+/* the data, when you step into a board */
+.arch-panel{position:fixed;top:0;right:0;bottom:0;width:min(400px,36vw);z-index:32;background:var(--tile);padding:40px 34px;overflow-y:auto;transform:translateX(100%);transition:transform 800ms cubic-bezier(.6,0,.2,1);user-select:text;-webkit-user-select:text;cursor:default}
+.arch-panel.on{transform:none}
+.ap-top{display:flex;justify-content:space-between;align-items:baseline}
+.ap-x{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:none;border:0;color:var(--mute);cursor:pointer}
+.ap-x:hover{color:var(--blue)}
+.ap-who{font-size:26px;font-weight:500;letter-spacing:-.015em;margin-top:18px}
+.ap-who.you{color:var(--blue)}
+.ap-when{font-size:12px;color:var(--mute);margin-top:4px;font-variant-numeric:tabular-nums}
+.ap-nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:30px}
+.ap-nums b{display:block;font-size:26px;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ap-nums span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.ap-nums .crook b{color:var(--red)}
+.ap-sec{margin-top:34px}
+.ap-sec .arch-k{margin-bottom:10px}
+.ap-line{display:block;width:100%;height:90px;background:var(--bg)}
+.ap-axis{display:flex;justify-content:space-between;font-size:10px;color:var(--mute);margin-top:4px;letter-spacing:.06em}
+.ap-txt{font-size:13px;line-height:1.5}
+.ap-line-s{font-size:12px;margin-top:22px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ap-again{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:none;border:0;color:var(--blue);cursor:pointer;opacity:0;pointer-events:none;transition:opacity 400ms ease}
+.ap-again.on{opacity:1;pointer-events:auto}
+.ap-big{font-size:44px;font-weight:500;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--red);margin:4px 0 8px}
+.ap-q{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.5}
+.ap-cmp{font-size:12px;color:var(--mute);line-height:1.6;font-variant-numeric:tabular-nums}
+.ap-nav{display:flex;justify-content:space-between;margin-top:40px}
+.ap-nav button{font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:none;border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:10px 14px;color:var(--ink);cursor:pointer}
+.ap-nav button:hover{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue)}
+.ap-demo{margin-top:26px;font-size:10px;letter-spacing:.14em;color:var(--mute)}
+@media (max-width:760px){.arch-panel{width:100%;top:auto;height:58vh}.arch-ov{left:16px;top:16px;right:16px}}
+</style>
+</head>
+<body>
+
+<div class="clock" id="clock"></div>
+
+<!-- counters kept off-screen: the interface no longer keeps score -->
+<div hidden><span id="fig"></span><span id="field"></span><span id="units"></span><span id="aligned"></span><div id="bar"><i id="barFill"></i></div><span id="corr"></span><span id="rit"></span><span id="time"></span><div id="hint"></div></div>
+
+<!-- no on-screen next button; N still moves to the next board (for presenting) -->
+
+<div class="ask" id="ask"><div class="ask-in">
+  <label class="ask-name"><span>Your name — if you want it on your board</span><input id="askName" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Leave empty to stay anonymous"></label>
+  <div class="ask-q">Before you start — do you have OCD?</div>
+  <div class="ask-b"><button data-a="yes">Yes, diagnosed</button><button data-a="maybe">I don’t know</button><button data-a="no">No</button><button data-a="skip">I’d rather not say</button></div>
+  <div class="ask-n" id="askNote">Nothing but your answer and how you play is kept. If you write your name, it will be shown with your board in the archive — your answer to this question won’t be.</div>
+</div></div>
+<div class="opening" id="intro"><p>Something isn’t right.</p></div>
+
+<div class="closing" id="closing">
+  <div>
+    <p class="c1" id="c1">You stopped.</p>
+    <p class="c2" id="c2">It still isn’t right.</p>
+    <p class="c3" id="c3"></p>
+  </div>
+</div>
+
+<div class="archive" id="archive" aria-label="Archive"><canvas id="archCanvas"></canvas></div>
+<div class="arch-stat" id="archStat"></div>
+<div class="arch-ocd" id="archOcd"><button data-f="all" class="sel">Everyone</button><button data-f="yes">OCD</button><button data-f="maybe">Don’t know</button><button data-f="no">No OCD</button></div>
+<div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
+<aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
+
+<div class="zoomer" aria-label="Zoom">
+  <button id="zin" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 2v10M2 7h10"/></svg></button>
+  <div class="zread" id="zread">1.0×</div>
+  <button id="zout" title="Zoom out (−)" aria-label="Zoom out"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 7h10"/></svg></button>
+  <button id="zreset" class="zreset" title="Reset (0)" aria-label="Reset zoom">1:1</button>
+</div>
+
+<div class="ritual" id="ritual" hidden>
+  <svg class="r-svg" id="rSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div class="r-box" id="rBox">
+    <div class="r-label">Interruption <span id="rNo">01</span></div>
+    <div class="r-text" id="rText"></div>
+    <div class="r-sub" id="rSub"></div>
+    <div class="r-pips" id="rPips"></div>
+  </div>
+</div>
+
+<main class="stage">
+  <div class="frame">
+    <i class="mark a"></i><i class="mark b"></i><i class="mark c"></i><i class="mark d"></i>
+    <div class="view" id="view"><div id="grid" aria-label="Correction field"></div></div>
+  </div>
+</main>
+
+<script>
+(() => {
+'use strict';
+
+/* ======================================================
+   Tuning
+   k   : entanglement strength (row sum k·n must stay < 1 → always solvable)
+   n   : how many neighbours each tile feels (left, up, up-left; wrapping)
+   tol : how close to zero an error must be to count as perfect
+   ====================================================== */
+// c × r tiles per stage. Gentle at first, then the field keeps growing.
+// one board. seventy shapes. every one is tied to exactly one other —
+// and the ties close into a single loop, so nothing can be fixed alone.
+const LEVELS = [
+  { c: 10, r: 7, k: .58, n: 1, tol: .009 }
+];
+const levelDef = i => LEVELS[Math.min(i, LEVELS.length - 1)];
+const LV = () => levelDef(state.level);
+const intensity = () => state.started ? Math.min(8, Math.floor((performance.now() - state.t0) / 45000)) : 0;
+const tier = () => Math.min(3, Math.floor(state.level / 2));
+
+const DRAG_PX = 380;      // px of drag for the full slider range
+const FINE = .18;         // Shift multiplier
+const HARMONY_MS = 1500;  // the reward
+const ZOOM_MS = 4200;
+const BREAK_MS = 1500;    // how long the infection takes to reach the old tiles
+
+const HINTS = {
+  1: 'Drag a tile sideways until its shape is perfect.',
+  2: 'Every correction is felt by its neighbours.',
+  3: 'Two more. There are always two more.',
+  4: 'Hold Shift for precision.',
+  5: 'The field has no edge. What leaves one side returns on the other.',
+  6: 'Scroll to look closer. It won\u2019t help.',
+  7: 'There was never going to be an end.'
+};
+const hintFor = f => HINTS[f] || HINTS[7];
+
+const NS = 'http://www.w3.org/2000/svg';
+/* ---------- Palette & forms grow with every stage ----------
+   Stage 1 (2×2): 4 primitives, 4 colours.
+   Each stage unlocks new, more complex forms and new colours —
+   and the newest ones dominate the freshly added tiles. */
+const PALETTE_TIERS = [   // the reference board's nine colours
+  ['blue', 'red', 'green', 'yellow', 'orange', 'teal', 'violet', 'pink']
+];
+const SHAPE_TIERS = [
+  ['stripes', 'ring', 'square', 'triangle'],
+  ['cross', 'dots', 'diamond', 'chevrons', 'halfsplit', 'bars'],
+  ['concentric', 'radial', 'checker', 'nested', 'row', 'hexagon'],
+  ['quarters', 'target', 'grill', 'orbit']
+];
+const capT = t => Math.min(t, SHAPE_TIERS.length - 1);
+function shapeFor(tier) {
+  const t = capT(tier);
+  if (t > 0 && Math.random() < .6) return pick(SHAPE_TIERS[t]);
+  return pick(SHAPE_TIERS.slice(0, t + 1).flat());
+}
+// every tile's main colour is the one least used in the field so far,
+// so the palette spreads as widely as possible and repeats come last
+const colorUse = {};
+function useColor(c) { colorUse[c] = (colorUse[c] || 0) + 1; }
+function colorsFor(tier, n = 3) {
+  const t = capT(tier);
+  const all = PALETTE_TIERS.slice(0, t + 1).flat().map(k => `var(--${k})`);
+  const min = Math.min(...all.map(c => colorUse[c] || 0));
+  const out = [pick(all.filter(c => (colorUse[c] || 0) === min))];
+  while (out.length < n) out.push(pick(all.filter(c => !out.includes(c))));
+  return out;
+}
+
+const $ = id => document.getElementById(id);
+const grid = $('grid');
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = v => Math.min(1, Math.max(0, v));
+const sign = () => (Math.random() < .5 ? -1 : 1);
+
+/* ======================================================
+   WHERE THE ARCHIVE COMES FROM
+   MODE 'demo' — this computer: six hundred simulated visitors + games played in this browser.
+   MODE 'live' — the published site: no simulated visitors, only real games, shared through a Google Sheet.
+   ====================================================== */
+const MODE = 'live';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwyaoaEVjITJ_szti6NZq0q2RwZL--TMGOLMyJBj8ZsrwR7zYiVBz6DR48MeNqJJSGzCg/exec';
+const ARCH = { name: '', lastNote: '', timeline: [], preview: false, start: null, prev: null, events: [], touches: [] };   // what the archive keeps of you
+const state = { ocd: null, level: 0, tiles: [], locked: false, started: false, t0: 0, corrections: 0, fig: 1, drag: null, ritual: null, rituals: 0 };
+
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+/* ---------- Shapes: each returns update(f), f ∈ [-1,1], 0 = perfect ----------
+   c = array of colours. Complex forms carry several flaws at once. */
+const tr = (x, y) => `translate(${x.toFixed(3)} ${y.toFixed(3)})`;
+const rot = (a, x, y) => `rotate(${a.toFixed(3)} ${x} ${y})`;
+const dir = () => pick([0, 45, 90, 135, 180, 225, 270, 315]) * Math.PI / 180;
+const r3 = n => Math.floor(Math.random() * n);
+
+const BUILD = {
+  /* ---- tier 1: primitives ---- */
+  stripes(svg, c) {
+    const idx = r3(3); let tg, cy;
+    for (let j = 0; j < 3; j++) {
+      const y = 26.5 + j * 20, g = svgEl('g', {}, svg);
+      svgEl('rect', { x: 20, y, width: 60, height: 7, fill: c[0] }, g);
+      if (j === idx) { tg = g; cy = y + 3.5; }
+    }
+    return f => tg.setAttribute('transform', rot(f * 13, 50, cy));
+  },
+  ring(svg, c) {
+    const base = pick([-90, 0, 90, 180, 45, -135]);
+    const ring = svgEl('circle', { cx: 50, cy: 50, r: 25, fill: 'none', stroke: c[0], 'stroke-width': 8, pathLength: 360 }, svg);
+    return f => {
+      const gap = Math.abs(f) * 46;
+      if (gap < .05) ring.removeAttribute('stroke-dasharray');
+      else ring.setAttribute('stroke-dasharray', `${(360 - gap).toFixed(3)} ${gap.toFixed(3)}`);
+      ring.setAttribute('transform', rot(base + f * 30, 50, 50));
+    };
+  },
+  square(svg, c) {
+    const a = dir();
+    const r = svgEl('rect', { x: 31, y: 31, width: 38, height: 38, fill: c[0] }, svg);
+    return f => r.setAttribute('transform', tr(f * 13 * Math.cos(a), f * 13 * Math.sin(a)));
+  },
+  triangle(svg, c) {
+    const p = svgEl('polygon', { points: '50,20 78,68.5 22,68.5', fill: c[0] }, svg);
+    return f => p.setAttribute('transform', rot(f * 17, 50, 52.33));
+  },
+
+  /* ---- tier 2 ---- */
+  cross(svg, c) {
+    const vertical = Math.random() < .5;
+    svgEl('rect', { x: 22, y: 46, width: 56, height: 8, fill: c[0] }, svg);
+    const bar = svgEl('rect', { x: 46, y: 22, width: 8, height: 56, fill: c[1] }, svg);
+    return f => bar.setAttribute('transform', vertical ? tr(0, f * 11) : tr(f * 11, 0));
+  },
+  dots(svg, c) {
+    const idx = r3(4), a = dir(); let mv;
+    [[35, 35], [65, 35], [35, 65], [65, 65]].forEach(([x, y], j) => {
+      const d = svgEl('circle', { cx: x, cy: y, r: 8, fill: j === 3 ? c[1] : c[0] }, svg);
+      if (j === idx) mv = d;
+    });
+    return f => mv.setAttribute('transform', tr(f * 9 * Math.cos(a), f * 9 * Math.sin(a)));
+  },
+  diamond(svg, c) {
+    const r = svgEl('rect', { x: 31, y: 31, width: 38, height: 38, fill: c[0] }, svg);
+    return f => r.setAttribute('transform', rot(45 + f * 14, 50, 50));
+  },
+  chevrons(svg, c) {
+    const idx = r3(3); let tg, cy;
+    for (let j = 0; j < 3; j++) {
+      const y = 34 + j * 16, g = svgEl('g', {}, svg);
+      svgEl('polyline', { points: `26,${y + 9} 50,${y - 7} 74,${y + 9}`, fill: 'none', stroke: j === 1 ? c[1] : c[0], 'stroke-width': 6, 'stroke-miterlimit': 10 }, g);
+      if (j === idx) { tg = g; cy = y + 1; }
+    }
+    return f => tg.setAttribute('transform', rot(f * 14, 50, cy));
+  },
+  halfsplit(svg, c) {
+    const g = svgEl('g', {}, svg);
+    svgEl('path', { d: 'M22 50 A28 28 0 0 1 78 50 Z', fill: c[0] }, g);
+    const b = svgEl('path', { d: 'M22 50 A28 28 0 0 0 78 50 Z', fill: c[1] }, g);
+    return f => { g.setAttribute('transform', rot(f * 18, 50, 50)); b.setAttribute('transform', tr(0, Math.abs(f) * 5)); };
+  },
+  bars(svg, c) {
+    const idx = r3(3); let tg;
+    [56, 40, 48].forEach((w, j) => {
+      const r = svgEl('rect', { x: 22, y: 29 + j * 16, width: w, height: 10, fill: c[j] }, svg);
+      if (j === idx) tg = r;
+    });
+    return f => tg.setAttribute('transform', tr(f * 9, 0));
+  },
+
+  /* ---- tier 3 ---- */
+  concentric(svg, c) {
+    const a = dir();
+    svgEl('circle', { cx: 50, cy: 50, r: 30, fill: c[0] }, svg);
+    const m = svgEl('circle', { cx: 50, cy: 50, r: 20, fill: c[1] }, svg);
+    const i = svgEl('circle', { cx: 50, cy: 50, r: 10, fill: c[2] }, svg);
+    return f => {
+      m.setAttribute('transform', tr(f * 4 * Math.cos(a), f * 4 * Math.sin(a)));
+      i.setAttribute('transform', tr(f * 8 * Math.cos(a + 1.3), f * 8 * Math.sin(a + 1.3)));
+    };
+  },
+  radial(svg, c) {
+    const idx = r3(8); let tg;
+    for (let j = 0; j < 8; j++) {
+      const g = svgEl('g', { transform: rot(j * 45, 50, 50) }, svg);
+      const inner = svgEl('g', {}, g);
+      svgEl('rect', { x: 48, y: 18, width: 4, height: 20, fill: j % 2 ? c[2] : c[0] }, inner);
+      if (j === idx) tg = inner;
+    }
+    svgEl('circle', { cx: 50, cy: 50, r: 6, fill: c[1] }, svg);
+    return f => tg.setAttribute('transform', rot(f * 16, 50, 50));
+  },
+  checker(svg, c) {
+    const idx = r3(9), a = dir(); let tg;
+    for (let j = 0; j < 9; j++) {
+      const r = Math.floor(j / 3), col = j % 3;
+      const e = svgEl('rect', { x: 27 + col * 16, y: 27 + r * 16, width: 14, height: 14, fill: j === 4 ? c[2] : c[(r + col) % 2] }, svg);
+      if (j === idx) tg = e;
+    }
+    return f => tg.setAttribute('transform', tr(f * 6 * Math.cos(a), f * 6 * Math.sin(a)));
+  },
+  nested(svg, c) {
+    svgEl('rect', { x: 22, y: 22, width: 56, height: 56, fill: c[0] }, svg);
+    const m = svgEl('rect', { x: 31, y: 31, width: 38, height: 38, fill: c[1] }, svg);
+    const i = svgEl('rect', { x: 40, y: 40, width: 20, height: 20, fill: c[2] }, svg);
+    return f => { m.setAttribute('transform', rot(f * 11, 50, 50)); i.setAttribute('transform', tr(-f * 4, f * 3)); };
+  },
+  row(svg, c) {
+    svgEl('line', { x1: 16, y1: 64, x2: 84, y2: 64, stroke: c[0], 'stroke-width': .8, opacity: .5 }, svg);
+    const ci = svgEl('circle', { cx: 28, cy: 50, r: 9, fill: c[0] }, svg);
+    const sq = svgEl('rect', { x: 41, y: 41, width: 18, height: 18, fill: c[1] }, svg);
+    const tri = svgEl('polygon', { points: '72,40.5 82,59 62,59', fill: c[2] }, svg);
+    return f => {
+      ci.setAttribute('transform', tr(0, -f * 7));
+      sq.setAttribute('transform', rot(f * 12, 50, 50));
+      tri.setAttribute('transform', tr(f * 3, f * 5));
+    };
+  },
+  hexagon(svg, c) {
+    const pts = [...Array(6)].map((_, j) => {
+      const a = j * Math.PI / 3;
+      return `${(50 + 28 * Math.cos(a)).toFixed(2)},${(50 + 28 * Math.sin(a)).toFixed(2)}`;
+    }).join(' ');
+    const h = svgEl('polygon', { points: pts, fill: c[0] }, svg);
+    const d = svgEl('circle', { cx: 50, cy: 50, r: 9, fill: c[1] }, svg);
+    return f => { h.setAttribute('transform', rot(f * 14, 50, 50)); d.setAttribute('transform', tr(f * 5, -f * 3)); };
+  },
+
+  /* ---- tier 4 ---- */
+  quarters(svg, c) {
+    const idx = r3(4); let tg, cx, cy;
+    [
+      ['M47.5 47.5 L21.5 47.5 A26 26 0 0 1 47.5 21.5 Z', 47.5, 47.5],
+      ['M52.5 47.5 L52.5 21.5 A26 26 0 0 1 78.5 47.5 Z', 52.5, 47.5],
+      ['M52.5 52.5 L78.5 52.5 A26 26 0 0 1 52.5 78.5 Z', 52.5, 52.5],
+      ['M47.5 52.5 L47.5 78.5 A26 26 0 0 1 21.5 52.5 Z', 47.5, 52.5]
+    ].forEach(([d, x, y], j) => {
+      const p = svgEl('path', { d, fill: c[j % 3] }, svg);
+      if (j === idx) { tg = p; cx = x; cy = y; }
+    });
+    return f => tg.setAttribute('transform', rot(f * 14, cx, cy));
+  },
+  target(svg, c) {
+    const ring = svgEl('circle', { cx: 50, cy: 50, r: 27, fill: 'none', stroke: c[0], 'stroke-width': 4, pathLength: 360 }, svg);
+    const x = svgEl('g', {}, svg);
+    svgEl('rect', { x: 49, y: 16, width: 2, height: 68, fill: c[1] }, x);
+    svgEl('rect', { x: 16, y: 49, width: 68, height: 2, fill: c[1] }, x);
+    const dot = svgEl('circle', { cx: 50, cy: 50, r: 5, fill: c[2] }, svg);
+    return f => {
+      const g = Math.abs(f) * 30;
+      if (g < .05) ring.removeAttribute('stroke-dasharray');
+      else ring.setAttribute('stroke-dasharray', `${(360 - g).toFixed(3)} ${g.toFixed(3)}`);
+      ring.setAttribute('transform', rot(-90 + f * 40, 50, 50));
+      x.setAttribute('transform', tr(f * 5, -f * 3));
+      dot.setAttribute('transform', tr(-f * 3, f * 4));
+    };
+  },
+  grill(svg, c) {
+    const idx = r3(5); let tg, cx;
+    for (let j = 0; j < 5; j++) {
+      const g = svgEl('g', {}, svg);
+      svgEl('rect', { x: 28 + j * 10, y: 22, width: 4, height: 56, fill: c[j % 3] }, g);
+      if (j === idx) { tg = g; cx = 30 + j * 10; }
+    }
+    return f => tg.setAttribute('transform', rot(f * 9, cx, 50));
+  },
+  orbit(svg, c) {
+    svgEl('circle', { cx: 50, cy: 50, r: 26, fill: 'none', stroke: c[0], 'stroke-width': 2 }, svg);
+    svgEl('circle', { cx: 50, cy: 76, r: 6, fill: c[2] }, svg);
+    svgEl('circle', { cx: 50, cy: 50, r: 3, fill: c[0] }, svg);
+    const g = svgEl('g', {}, svg);
+    svgEl('circle', { cx: 50, cy: 24, r: 6, fill: c[1] }, g);
+    return f => g.setAttribute('transform', rot(f * 22, 50, 50));
+  }
+};
+
+/* ---------- Tile ---------- */
+// the reference board's sixteen forms, dealt from a shuffled bag so each appears about equally
+const SHAPES_USED = ['stripes', 'ring', 'square', 'triangle', 'cross', 'dots', 'diamond', 'chevrons',
+                     'halfsplit', 'bars', 'concentric', 'radial', 'checker', 'nested', 'row', 'hexagon'];
+const shapeBag = [];
+function nextShape() {
+  if (!shapeBag.length) shapeBag.push(...[...SHAPES_USED].sort(() => Math.random() - .5));
+  return shapeBag.pop();
+}
+function makeTile(shape, colors, tier = 0) {
+  shape = shape || nextShape();
+  colors = colors || colorsFor(3, 3);   // colours unlock every stage
+  useColor(colors[0]);
+  const t = rand(.14, .86);
+  let s;
+  do { s = Math.random(); } while (Math.abs(s - t) < .18);
+
+  const tile = { s, t, shape, colors, fixes: 0, mix: 1, perfect: false, w: [sign(), sign(), sign()] };
+
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  const el = document.createElement('div');
+  el.className = 'tile';
+  el.tabIndex = 0;
+  el.setAttribute('role', 'slider');
+  el.setAttribute('aria-label', `${shape} tile`);
+  el.setAttribute('aria-valuemin', '0');
+  el.setAttribute('aria-valuemax', '100');
+  cell.appendChild(el);
+
+  const svg = svgEl('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
+  el.appendChild(svg);
+  tile.update = BUILD[shape](svg, colors);
+  svgEl('line', { x1: 14, y1: 91, x2: 86, y2: 91, class: 'trk' }, svg);
+  tile.thumb = svgEl('rect', { x: 0, y: 89.4, width: 3.2, height: 3.2, class: 'thumb' }, svg);
+  tile.ok = svgEl('rect', { x: 88, y: 8.5, width: 3.2, height: 3.2, class: 'ok', opacity: 0 }, svg);
+
+  tile.cell = cell;
+  tile.el = el;
+  bind(tile);
+  return tile;
+}
+
+/* ---------- Entanglement ----------
+   d_i = s_i − t_i            (the tile's own distance from its secret target)
+   e_i = d_i + k·Σ w·d_j      (what you actually see: its flaw, polluted by neighbours)
+   A = I + kW is strictly diagonally dominant → unique solution s = t, and
+   correcting tiles one at a time (Gauss–Seidel) converges. Solvable, slowly. */
+function computeErrors() {
+  const { k } = LV(), T = state.tiles, L = state.link;
+  const d = T.map(t => t.s - t.t);
+  return T.map((t, i) => d[i] + k * t.w[0] * d[L[i]]);
+}
+
+/* tile i is pushed by tile link[i]. One loop through all sixty, in random order,
+   so the tile you are fixing usually disturbs one on the other side of the board. */
+function makeLinks() {
+  const n = state.tiles.length;
+  const order = [...Array(n).keys()].sort(() => Math.random() - .5);
+  state.link = new Array(n);
+  order.forEach((i, j) => { state.link[i] = order[(j + 1) % n]; });
+  state.tiles.forEach(t => { t.w = [sign(), sign(), sign()]; });
+}
+
+// error → visible flaw. sqrt makes the last few percent stubbornly visible.
+function flaw(e, tol) {
+  const a = Math.abs(e);
+  if (a < tol) return 0;
+  return Math.sign(e) * Math.min(1, Math.sqrt(a) * 1.25);
+}
+
+function render() {
+  const e = computeErrors(), tol = LV().tol;
+  let count = 0, fixed = null, broke = null;
+  state.tiles.forEach((t, i) => {
+    const p = Math.abs(e[i]) < tol;
+    t.update(flaw(e[i], tol));
+    t.thumb.setAttribute('x', (14 + 72 * t.s - 1.6).toFixed(2));
+    t.el.setAttribute('aria-valuenow', Math.round(t.s * 100));
+    if (p && !t.perfect) t.rightSince = performance.now();
+    if (p && !t.perfect && !state.locked) { snap(t); fixed = t; Sound.right(); }
+    if (!p && t.perfect && !state.locked && !(state.drag && state.drag.tile === t)) broke = t;
+    t.perfect = p;
+    t.ok.setAttribute('opacity', p ? 1 : 0);
+    t.el.classList.toggle('right', p);
+    if (p) count++;
+  });
+  hud(count);
+  const tot = state.tiles.length;
+  Sound.level(1 - count / tot);
+  if (!state.locked && !state.drifting && count < tot) {
+    if (broke) { Voice.say('break', broke); Sound.crack(); }
+    else if (count === tot - 1 && tot >= 3) Voice.say('almost', state.tiles.find(t => !t.perfect));
+    else if (fixed) Voice.say('perfect', fixed);
+  }
+  return count === tot;
+}
+
+function snap(t) {
+  t.el.classList.remove('snap');
+  void t.el.offsetWidth;
+  t.el.classList.add('snap');
+}
+
+/* ---------- Input ---------- */
+function bind(tile) {
+  const el = tile.el;
+  el.addEventListener('pointerdown', ev => {
+    if (state.locked || state.ritual) return;
+    ev.preventDefault();
+    el.focus({ preventScroll: true });
+    el.setPointerCapture(ev.pointerId);
+    const e0 = computeErrors(), i0 = state.tiles.indexOf(tile), dep = state.link.indexOf(i0);
+    state.drag = { tile, x: ev.clientX, moved: false, id: ev.pointerId, e0: Math.abs(e0[i0]), dep, d0: dep >= 0 ? Math.abs(e0[dep]) : 0 };
+    el.classList.add('active');
+    begin();
+    Voice.poke();
+    if (tile.perfect) Voice.say('check', tile);
+    else Voice.revisit(tile);
+  });
+  el.addEventListener('pointermove', ev => {
+    const d = state.drag;
+    if (!d || d.tile !== tile || state.locked || state.ritual || pinch) return;
+    const dx = ev.clientX - d.x;
+    d.x = ev.clientX;
+    if (!dx) return;
+    tile.s = clamp(tile.s + dx / DRAG_PX * (ev.shiftKey ? FINE : 1));
+    d.moved = true;
+    const me = state.tiles.indexOf(tile);
+    state.tiles.forEach((t, j) => t.el.classList.toggle('echo', state.link[j] === me));
+    Voice.poke();
+    afterInput();
+  });
+  const end = () => {
+    const d = state.drag;
+    if (!d || d.tile !== tile) return;
+    state.drag = null;
+    el.classList.remove('active');
+    document.querySelectorAll('.tile.echo').forEach(t => t.classList.remove('echo'));
+    if (d.moved) {
+      state.corrections++; tile.fixes++; counters();
+      ARCH.touches.push([+((performance.now() - state.t0) / 1000).toFixed(1), state.tiles.indexOf(tile)]); Sound.tick(); maybeProgressRitual();
+      state.sameCount = state.lastTouched === tile ? (state.sameCount || 1) + 1 : 1;
+      state.lastTouched = tile;
+      const i = state.tiles.indexOf(tile), e = Math.abs(computeErrors()[i]), tol = LV().tol;
+      const e1 = computeErrors(), depMoved = d.dep >= 0 && Math.abs(e1[d.dep]) - d.d0 > tol * 4;
+      if (state.sameCount >= 4) Voice.say('stuck', tile);
+      else if (!tile.perfect && e < tol * 3.5) Voice.say('near', tile);
+      else if (depMoved && Math.random() < .5) Voice.say('tug', state.tiles[d.dep]);
+      else if (!tile.perfect && e > d.e0 + tol) Voice.say('worse', tile);
+      else if (!tile.perfect) Voice.say(e < d.e0 ? 'better' : 'worse', tile);   // every touch gets an answer
+    }
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  el.addEventListener('keydown', ev => {
+    if (state.locked || state.ritual) return;
+    const step = ev.shiftKey ? .001 : .004;
+    let delta = 0;
+    if (ev.key === 'ArrowRight' || ev.key === 'ArrowUp') delta = step;
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowDown') delta = -step;
+    if (!delta) return;
+    ev.preventDefault();
+    begin();
+    Voice.poke();
+    tile.s = clamp(tile.s + delta);
+    state.corrections++; tile.fixes++;
+    counters();
+    afterInput();
+  });
+}
+
+function begin() {
+  if (state.started) return;
+  state.started = true;
+  state.t0 = performance.now();
+  document.querySelectorAll('.tile.beckon').forEach(t => t.classList.remove('beckon'));
+  scheduleRitual();
+}
+
+function afterInput() {
+  if (render() && !state.locked) solved();
+}
+
+/* ---------- The curse ---------- */
+function solved() {
+  state.locked = true;
+  Voice.hush();
+  Sound.silence(.08);
+  resetView(true);
+  if (state.drag) { state.drag.tile.el.classList.remove('active'); state.drag = null; }
+  state.tiles.forEach(snap);
+  document.body.classList.add('harmony');
+  setTimeout(relapse, HARMONY_MS);
+}
+
+function expand() {
+  const o = LV(), nl = levelDef(state.level + 1);
+  const offC = Math.floor((nl.c - o.c) / 2), offR = Math.floor((nl.r - o.r) / 2);
+  const before = grid.getBoundingClientRect();
+  const T = new Array(nl.c * nl.r);
+  state.tiles.forEach((t, i) => {
+    const r = Math.floor(i / o.c), c = i % o.c;
+    t.mix = 0;  // the old tiles stay perfect... for now
+    T[(r + offR) * nl.c + (c + offC)] = t;
+  });
+  state.level++;
+  state.fig++;
+  for (let i = 0; i < T.length; i++) {
+    if (!T[i]) { T[i] = makeTile(null, null, tier()); T[i].cell.classList.add('enter'); }
+  }
+  T.forEach(t => { t.w = [sign(), sign(), sign()]; });
+  state.tiles = T;
+
+  grid.style.transition = 'none';
+  grid.style.transform = 'none';
+  sizeFrame();
+  grid.style.gridTemplateColumns = `repeat(${nl.c}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${nl.r}, 1fr)`;
+  grid.replaceChildren(...T.map(t => t.cell));
+  render();
+
+  // place the grid so the solved block sits exactly where it was, then let go
+  const g = grid.getBoundingClientRect();
+  const cw = g.width / nl.c, ch = g.height / nl.r;
+  const k = before.width / (o.c * cw);
+  const tx = before.left - g.left - offC * cw * k;
+  const ty = before.top - g.top - offR * ch * k;
+  grid.style.transform = `translate(${tx}px, ${ty}px) scale(${k})`;
+  void grid.offsetWidth;
+
+  requestAnimationFrame(() => {
+    grid.style.transition = `transform ${ZOOM_MS}ms cubic-bezier(.65,0,.15,1)`;
+    grid.style.transform = 'none';
+    const half = Math.max(nl.c, nl.r) / 2;
+    T.forEach((t, i) => {
+      if (!t.cell.classList.contains('enter')) return;
+      const r = Math.floor(i / nl.c), c = i % nl.c;
+      const dist = Math.hypot(r - (nl.r - 1) / 2, c - (nl.c - 1) / 2) / half;
+      t.el.style.transitionDelay = '600ms';   // all new tiles arrive together
+      t.cell.classList.remove('enter');
+    });
+  });
+
+  setTimeout(infect, ZOOM_MS + 150);
+}
+
+/* the moment passes. every target moves, the ties re-form, and it is all wrong again */
+/* ======================================================
+   "Right" doesn't hold.
+   A tile that has been right for a while quietly slips — just past the line,
+   barely visible. No sound, no thought, no notice. You only find out by checking.
+   ====================================================== */
+let lastDrift = 0;
+setInterval(() => {
+  if (!state.started || state.locked || state.ended) return;
+  const now = performance.now();
+  const gap = Math.max(2500, 7000 - intensity() * 600);          // it happens more often the longer you stay
+  if (now - lastDrift < gap || Math.random() > .35) return;
+  const { tol } = LV(), e = computeErrors();
+  const ripe = state.tiles.filter((t, i) =>
+    t.perfect && !(state.drag && state.drag.tile === t) &&
+    now - (t.rightSince || now) > (t.holdFor || (t.holdFor = rand(6000, 45000))));
+  if (!ripe.length) return;
+  const t = pick(ripe), i = state.tiles.indexOf(t);
+  const dir = Math.sign(e[i]) || sign();
+  t.t -= dir * tol * rand(1.35, 1.8);                                // just past "right" — almost nothing
+  t.holdFor = rand(6000, 45000);
+  lastDrift = now;
+  state.drifting = true;  // the slip makes no sound and draws no comment
+  render();
+  state.drifting = false;
+}, 1000);
+
+function relapse() {
+  grid.style.transition = 'opacity 700ms ease';
+  grid.style.opacity = 0;
+  setTimeout(() => {
+    for (const k in colorUse) delete colorUse[k];
+    shapeBag.length = 0;
+    const { c, r } = LV();
+    state.tiles = Array.from({ length: c * r }, () => makeTile(null, null, 3));
+    makeLinks();
+    grid.replaceChildren(...state.tiles.map(t => t.cell));
+    const tol = LV().tol * 5;   // never start with a tile that already looks right
+    for (let guard = 0; guard < 2000; guard++) {
+      const e = computeErrors(), bad = e.findIndex(v => Math.abs(v) < tol);
+      if (bad < 0) break;
+      const t = state.tiles[bad];
+      do { t.s = Math.random(); } while (Math.abs(t.s - t.t) < .18);
+    }
+    state.fig++;
+    render();                                   // still locked: no snaps while it appears
+    document.body.classList.remove('harmony');
+    grid.style.opacity = 1;
+    setTimeout(() => { state.locked = false; render(); Voice.say('expand'); }, 750);
+  }, 750);
+}
+
+/* the field keeps square cells; its outline follows c × r */
+function sizeFrame() {
+  const { c, r } = LV();
+  // the field fills the whole screen, edge to edge — and runs a little past it
+  const cell = Math.max(innerWidth / c, innerHeight / r);
+  frame.style.width = `${cell * c}px`;
+  frame.style.height = `${cell * r}px`;
+  frame.style.left = `${(innerWidth - cell * c) / 2}px`;
+  frame.style.top = `${(innerHeight - cell * r) / 2}px`;
+  frame.style.setProperty('--m', `${(cell * .36).toFixed(1)}px`);    // marks sit the same distance out on every side
+  frame.style.setProperty('--ms', `${(cell * .18).toFixed(1)}px`);
+}
+
+function infect() {
+  document.body.classList.remove('harmony');
+  state.tiles.forEach(t => { t.el.style.transitionDelay = ''; });
+  document.body.classList.toggle('dense', state.level >= 4);
+  scheduleRitual();
+  const olds = state.tiles.filter(t => t.mix < 1);
+  const t0 = performance.now();
+  (function step(now) {
+    const p = Math.min(1, (now - t0) / BREAK_MS);
+    const eased = p * p * (3 - 2 * p);
+    olds.forEach(t => { t.mix = eased; });
+    render();
+    if (p < 1) requestAnimationFrame(step);
+    else { state.locked = false; afterInput(); setTimeout(() => Voice.say('expand'), 700); }
+  })(t0);
+}
+
+/* ---------- HUD ---------- */
+function pad(n, w) { return String(n).padStart(w, '0'); }
+
+function hud(count) {
+  const tot = state.tiles.length, w = Math.max(2, String(tot).length);
+  $('aligned').innerHTML = `${pad(count, w)}<span> / ${pad(tot, w)}</span>`;
+  $('barFill').style.width = `${(count / tot) * 100}%`;
+  $('bar').classList.toggle('full', count === tot);
+  $('fig').textContent = `Fig. ${pad(state.fig, 2)}`;
+  $('field').textContent = `Field ${LV().c} × ${LV().r}`;
+  $('units').textContent = `${pad(tot, 2)} units`;
+}
+
+function counters() { $('corr').textContent = pad(state.corrections, 4); $('rit').textContent = pad(state.rituals, 2); }
+
+function showHint(text) {
+  return;   // exhibition: no captions — the inner voice is the only text
+  const h = $('hint');
+  h.textContent = text;
+  h.style.opacity = 1;
+  clearTimeout(showHint.t);
+  showHint.t = setTimeout(() => { h.style.opacity = 0; }, 5200);
+}
+
+setInterval(() => {
+  if (!state.started) return;
+  const s = Math.floor((performance.now() - state.t0) / 1000);
+  $('time').textContent = `${pad(Math.floor(s / 60), 2)}:${pad(s % 60, 2)}`;
+}, 250);
+
+/* ---------- Init: two tiles, behind an instruction card ---------- */
+function init() {
+  // everyone gets the same board — the same sixty shapes, in the same places, crooked the same way
+  const realRandom = Math.random;
+  { let a = 60; Math.random = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  state.tiles = Array.from({ length: LV().c * LV().r }, () => makeTile(null, null, 3));
+  makeLinks();
+  document.body.classList.add('dense');   // the zoom control is there from the start
+  sizeFrame();
+  grid.style.gridTemplateColumns = `repeat(${LV().c}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${LV().r}, 1fr)`;
+  grid.replaceChildren(...state.tiles.map(t => t.cell));
+
+  // never start with a tile that already looks right
+  const tol = LV().tol * 5;
+  for (let guard = 0; guard < 2000; guard++) {
+    const e = computeErrors();
+    const bad = e.findIndex(v => Math.abs(v) < tol);
+    if (bad < 0) break;
+    const t = state.tiles[bad];
+    do { t.s = Math.random(); } while (Math.abs(t.s - t.t) < .18);
+  }
+  Math.random = realRandom;   // from here on, chance is chance again
+  ARCH.initial = Archive.levels();   // how crooked the board is when anyone sits down
+  state.locked = true;   // stays locked until the intro is dismissed
+  render();
+
+  const intro = $('intro');
+  const go = () => {
+    if (intro.classList.contains('out')) return;
+    intro.classList.add('out');
+    setTimeout(() => { intro.remove(); }, 1900);
+    state.locked = false;
+    lastAny = performance.now();
+    // no instructions: if nothing happens, one control quietly moves
+    setTimeout(() => { if (!state.started && state.tiles[0]) state.tiles[0].el.classList.add('beckon'); }, 7000);
+  };
+  // first the question; the opening line only after it is answered
+  const ask = $('ask');
+  ask.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    state.ocd = b.dataset.a;
+    ARCH.name = ($('askName').value || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    ask.classList.add('out');
+    setTimeout(() => ask.remove(), 1300);
+    setTimeout(go, 3600);
+    intro.addEventListener('pointerdown', () => setTimeout(go, 200));
+  }));
+}
+
+/* the clock: the time of day, not the time spent */
+function clock() {
+  const d = new Date();
+  $('clock').textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+clock();
+setInterval(clock, 10000);
+
+/* ======================================================
+   The end — it ends only when you stop.
+   A minute without touching anything, and the room lets you go.
+   Then it resets for whoever comes next.
+   ====================================================== */
+let lastAny = performance.now();
+const IDLE_END_MS = 60000;
+['pointerdown', 'pointermove', 'keydown', 'wheel'].forEach(t =>
+  window.addEventListener(t, () => { lastAny = performance.now(); }, { capture: true, passive: true }));
+
+function ending() {
+  if (state.ended) return;
+  state.ended = true;
+  state.locked = true;
+  clearTimeout(ritualTimer);
+  if (state.ritual) {
+    const r = state.ritual;
+    clearInterval(r.iv); clearTimeout(r.subT); cancelAnimationFrame(r.raf); clearInterval(r.iv);
+    state.ritual = null; R.el.hidden = true; clearStage();
+  }
+  Voice.hush();
+  Sound.silence(2.5);
+  document.querySelectorAll('.note').forEach(n => n.remove());
+  Archive.arrive();                    // no words: your board shrinks, and goes in among everyone else's
+}
+setInterval(() => {
+  if (state.started && !state.ended && performance.now() - lastAny > IDLE_END_MS) ending();
+}, 1000);
+
+/* ======================================================
+   The archive — everyone who sat in front of these same sixty shapes.
+   Real visitors are kept in this browser; around them, six hundred demo
+   visitors (simulated, marked "demo"), so it is never empty.
+   ====================================================== */
+setInterval(() => {      // the session, as it happens: every change to every shape, so it can be watched again
+  if (!state.started || state.ended || typeof Archive === 'undefined') return;
+  const lv = Archive.levels(), t = +((performance.now() - state.t0) / 1000).toFixed(1);
+  if (!ARCH.start) { ARCH.start = lv; ARCH.prev = lv.slice(); return; }
+  lv.forEach((l, i) => { if (l !== ARCH.prev[i]) { ARCH.events.push([t, i, l]); ARCH.prev[i] = l; } });
+}, 350);
+setInterval(() => {      // how much of it was right, every five seconds
+  if (!state.started || state.ended) return;
+  ARCH.timeline.push(+(state.tiles.filter(t => t.perfect).length / state.tiles.length).toFixed(3));
+}, 5000);
+
+/* the shared archive for the published site: a Google Sheet behind a small Apps Script web app */
+const Remote = (() => {
+  const cols = ['id', 'at', 'name', 'ocd', 'dur', 'corr', 'left', 'chk', 'lv', 'fixes', 'tl'];
+  async function list() {
+    if (!SHEET_URL) return [];
+    try {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 6000);
+      const res = await fetch(SHEET_URL + '?list=1', { signal: ctl.signal }); clearTimeout(to);
+      const rows = await res.json();
+      return rows.map(r => ({ remote: true, id: r.id, at: +r.at, name: r.name || '', ocd: r.ocd || 'skip', dur: +r.dur, corr: +r.corr, left: +r.left, chk: +r.chk,
+        lv: JSON.parse(r.lv), fixes: JSON.parse(r.fixes), tl: JSON.parse(r.tl || '[]') })).filter(r => Array.isArray(r.lv) && r.lv.length === state.tiles.length);
+    } catch (e) { return []; }
+  }
+  async function detail(id) {
+    try { const res = await fetch(SHEET_URL + '?id=' + encodeURIComponent(id)); const d = await res.json(); return d && d.ev ? d : null; } catch (e) { return null; }
+  }
+  function send(rec) {
+    const row = { at: rec.at, name: rec.name, ocd: rec.ocd, dur: rec.dur, corr: rec.corr, left: rec.left, chk: rec.chk,
+      lv: JSON.stringify(rec.lv), fixes: JSON.stringify(rec.fixes), tl: JSON.stringify(rec.tl.map(v => +v.toFixed(2))),
+      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th }) };
+    // text/plain keeps the browser from asking permission first; the script reads it as JSON
+    fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) }).catch(() => {});
+  }
+  return { list, detail, send, cols };
+})();
+
+const Archive = (() => {
+  const KEY = 'just-right-60:archive2';
+  const COLS = LEVELS[0].c, ROWS = LEVELS[0].r, N = COLS * ROWS;
+  const TS = 10, PAD = 3, GAP = 4;                          // world units: a tile is 10
+  const BW = COLS * TS + PAD * 2, BH = ROWS * TS + PAD * 2, CW = BW + GAP, CH = BH + GAP;
+  const LEVEL = [-1, -.66, -.4, -.2, 0, .2, .4, .66, 1], STRAIGHT = 4;
+  const qz = f => { let b = 0; LEVEL.forEach((l, k) => { if (Math.abs(l - f) < Math.abs(LEVEL[b] - f)) b = k; }); return f && b === STRAIGHT ? (f > 0 ? 5 : 3) : b; };
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
+  const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const median = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : 0; };
+  const fmtDur = s => s < 60 ? `${s} sec` : `${Math.round(s / 60)} min`;
+  const fmtAt = t => { const d = new Date(t); return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  let filt = 'all', mine = null, list = [], cols = 1, occ = new Map(), bounds = null, play = null, sprites = null, cv, ctx, dpr = 1, V = { x: 0, y: 0, z: 1 }, anim = null, cur = -1, hover = -1, raf = 0, wired = false;
+  const BG = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#F1EFEA';
+
+  /* ---- the shapes, once per tile and per amount of crookedness, as pictures ---- */
+  function makeSprites() {
+    const e = computeErrors(), tol = LV().tol, css = getComputedStyle(document.documentElement);
+    const out = state.tiles.map(t => LEVEL.map(f => {
+      t.update(f);
+      const svg = t.el.querySelector('svg').cloneNode(true);
+      svg.querySelectorAll('.trk,.thumb,.ok').forEach(n => n.remove());
+      svg.setAttribute('xmlns', NS); svg.setAttribute('width', 100); svg.setAttribute('height', 100);
+      const src = new XMLSerializer().serializeToString(svg).replace(/var\((--[a-z]+)\)/g, (_, v) => css.getPropertyValue(v).trim() || '#999');
+      const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+      return im;
+    }));
+    state.tiles.forEach((t, i) => t.update(flaw(e[i], tol)));      // put the board back as it was
+    return out;
+  }
+  const ready = () => Promise.all(sprites.flat().map(im => im.decode ? im.decode().catch(() => {}) : Promise.resolve()));
+
+  /* ---- hundreds of people who sat in front of the same sixty shapes ---- */
+  function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function demos(count = 600) {
+    const R = mulberry(6060), rr = (a, b) => a + R() * (b - a), pk = a => a[Math.floor(R() * a.length)];
+    const lines = Object.values(VOICE_LINES).flatMap(c => [...(c.early || []), ...(c.late || [])]).filter(l => !/[{}]/.test(l));
+    const hardSet = new Set(); while (hardSet.size < 9) hardSet.add(Math.floor(R() * N));
+    const hard = Array.from({ length: N }, (_, i) => hardSet.has(i) ? rr(.55, .9) : rr(0, .06));   // a few shapes almost nobody gets right
+    const pull = Array.from({ length: N }, () => Math.pow(R(), 3));        // some draw the hand more than others
+    const now = Date.now(), d = [];
+    for (let p = 0; p < count; p++) {
+      const dur = Math.round(40 + Math.pow(R(), 1.7) * 1500), corr = Math.round(dur * rr(.3, 1.8));
+      // how many they left crooked, calibrated to how the board really behaves: the shapes pull on each
+      // other and drift back, so most people leave somewhere between thirty and sixty-five. Almost nobody gets below twenty.
+      const u0 = R(), stay = Math.min(1, Math.log(dur / 40) / Math.log(40));  // staying longer helps — a little
+      let L = u0 < .08 ? rr(14, 30) : u0 < .9 ? rr(30, 65) - stay * 8 : rr(64, 70);
+      L = Math.max(9, Math.min(N, Math.round(L)));
+      // which ones: the hard few nearly always, the rest by chance
+      const pool = hard.map((h, i) => [i, (h > .3 ? 6 : 1) * (.5 + R())]), lv = new Array(N).fill(STRAIGHT);
+      for (let n = 0; n < L; n++) {
+        let tot = pool.reduce((a, q) => a + q[1], 0), x = R() * tot, k = 0;
+        while (k < pool.length - 1 && (x -= pool[k][1]) > 0) k++;
+        lv[pool[k][0]] = pk([0, 1, 2, 3, 5, 6, 7, 8]); pool.splice(k, 1);
+      }
+      const w = pull.map(h => h + R() * .25), ws = w.reduce((a, b) => a + b, 0);
+      // the line of how much was right: it climbs, breaks, climbs — never past where they ended up, by much
+      const ceil = Math.min(.95, (N - L) / N + rr(.04, .18)), endV = (N - L) / N;
+      const tl = []; let v = 0; const steps = Math.max(2, Math.round(dur / 5));
+      for (let k = 0; k < steps; k++) { v += rr(0, .06) * (ceil - v); if (R() < .07) v -= rr(.05, .25); v = Math.max(0, Math.min(ceil, v)); tl.push(+v.toFixed(2)); }
+      tl[tl.length - 1] = +endV.toFixed(2);
+      const u = R(), ocd = u < .18 ? 'yes' : u < .4 ? 'maybe' : u < .85 ? 'no' : 'skip';   // demo answers are random: they say nothing about anyone
+      d.push({ demo: true, ocd, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
+    }
+    return d;
+  }
+
+  function save() {
+    const e = computeErrors(), tol = LV().tol;
+    mine = {
+      at: Date.now(), dur: Math.max(1, Math.floor((performance.now() - state.t0) / 1000)), corr: state.corrections,
+      lv: state.tiles.map((t, i) => qz(flaw(e[i], tol))), fixes: state.tiles.map(t => t.fixes), tl: ARCH.timeline.slice(), last: ARCH.lastNote,
+      ocd: state.ocd || 'skip', name: ARCH.name || '',
+      start: ARCH.start, ev: ARCH.events.slice(0, 2000), th: ARCH.touches.slice(0, 1000)
+    };
+    mine.left = mine.lv.filter(x => x !== STRAIGHT).length;
+    const c = checks(mine, 0); mine.chk = c ? c.n : 0;
+    if (MODE === 'live' && SHEET_URL && !ARCH.preview) Remote.send(mine);
+    if (!ARCH.preview) {
+      const all = load(); all.unshift(mine);
+      all.forEach((r, k) => { if (k >= 60) { delete r.ev; delete r.th; } });   // only the latest sixty keep their whole session
+      store(all.slice(0, 400));
+    }
+  }
+
+  /* ---- a small picture of every board, for when you're far away ---- */
+  function farThumb(rec) {     // from far away: only what they left crooked, in red. The rest is gone.
+    if (rec._fth) return rec._fth;
+    const c = document.createElement('canvas'); c.width = COLS * 4; c.height = ROWS * 4;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#E2341D';
+    rec.lv.forEach((l, i) => { if (l !== STRAIGHT) g.fillRect((i % COLS) * 4 + .5, Math.floor(i / COLS) * 4 + .5, 3, 3); });
+    return (rec._fth = c);
+  }
+  function thumb(rec) {
+    if (rec._th) return rec._th;
+    const c = document.createElement('canvas'); c.width = COLS * 22; c.height = ROWS * 22;
+    const g = c.getContext('2d');
+    rec.lv.forEach((l, i) => { g.globalAlpha = l === STRAIGHT ? .26 : 1; g.drawImage(sprites[i][l], (i % COLS) * 22, Math.floor(i / COLS) * 22, 22, 22); });
+    return (rec._th = c);
+  }
+
+  /* ---- drawing the wall ---- */
+  const cellXY = i => [list[i]._gx * CW, list[i]._gy * CH];
+  function draw() {
+    raf = 0;
+    const W = innerWidth, H = innerHeight, z = V.z;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+    const big = BW * z > 300, far = BW * z < 150;
+    for (let i = 0; i < list.length; i++) {
+      const rec = list[i];
+      const x = V.x + rec._gx * CW * z, y = V.y + rec._gy * CH * z;
+      if (x > W || y > H || x + BW * z < 0 || y + BH * z < 0) continue;
+      if (rec === mine && !mine.landed) { ctx.fillStyle = 'rgba(20,20,20,.05)'; ctx.fillRect(x, y, BW * z, BH * z); continue; }   // the empty place waiting for you
+      ctx.globalAlpha = cur >= 0 && i !== cur ? .14 : filt !== 'all' && rec.ocd !== filt && rec !== mine ? .1 : 1;
+      if (rec === mine || (i === hover && cur < 0)) {   // yours (and the one under your hand) sits a little above the rest — a soft shadow, no frame
+        ctx.save(); ctx.shadowColor = 'rgba(20,20,20,.28)'; ctx.shadowBlur = Math.max(6, 10 * z); ctx.shadowOffsetY = Math.max(2, 3 * z);
+        ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x, y, BW * z, BH * z); ctx.restore();
+      }
+      const ix = x + PAD * z, iy = y + PAD * z, t = TS * z;
+      if (far) { ctx.drawImage(farThumb(rec), x, y, BW * z, BH * z); ctx.globalAlpha = 1; continue; }
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x, y, BW * z, BH * z);
+      const lvs = play && play.i === i ? play.lv : rec.lv;
+      if (!big) ctx.drawImage(thumb(rec), ix, iy, COLS * t, ROWS * t);
+      else lvs.forEach((l, k) => {
+        const a = ctx.globalAlpha; ctx.globalAlpha = a * (l === STRAIGHT ? .26 : 1);
+        ctx.drawImage(sprites[k][l], ix + (k % COLS) * t, iy + Math.floor(k / COLS) * t, t, t);
+        ctx.globalAlpha = a;
+      });
+      if (play && play.i === i && big) {   // their hand, right now, in the replay
+        play.flash.forEach(([k, until]) => {
+          if (until < performance.now()) return;
+          const tx = ix + (k % COLS) * t, ty = iy + Math.floor(k / COLS) * t;
+          ctx.strokeStyle = '#E2341D'; ctx.lineWidth = Math.max(2, t * .06); ctx.strokeRect(tx + t * .04, ty + t * .04, t * .92, t * .92);
+        });
+      }
+      if (i === cur && big && !(play && play.i === i && !play.done)) {        // afterwards: every place their hands went
+        const mx = Math.max(1, ...rec.fixes);
+        rec.fixes.forEach((f, k) => {
+          if (!f) return;
+          const a = Math.pow(f / mx, .7), tx = ix + (k % COLS) * t, ty = iy + Math.floor(k / COLS) * t;
+          ctx.globalAlpha = .25 + .75 * a; ctx.strokeStyle = '#E2341D'; ctx.lineWidth = Math.max(1, t * (.02 + a * .07));
+          ctx.strokeRect(tx + t * .04, ty + t * .04, t * .92, t * .92);
+          ctx.globalAlpha = 1; ctx.fillStyle = '#E2341D'; ctx.font = `${Math.max(9, t * .15)}px Menlo, monospace`; ctx.textAlign = 'right';
+          ctx.fillText(String(f), tx + t * .9, ty + t * .2);
+        });
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  const redraw = () => { if (!raf) raf = requestAnimationFrame(draw); };
+  function warm() {           // make every small picture ahead of time, a few at a time, so the pull-back stays smooth
+    let k = 0;
+    const step = () => { const end = Math.min(list.length, k + 24); for (; k < end; k++) { farThumb(list[k]); thumb(list[k]); } if (k < list.length) setTimeout(step, 0); };
+    step();
+  }
+  function setView(v) { V = v; redraw(); }
+  function glide(to, ms, done) {      // moves the camera; zoom travels in log space, so pulling out feels like falling away
+    const from = { ...V }, t0 = performance.now();
+    cancelAnimationFrame(anim);
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      const z = Math.exp(Math.log(from.z) + (Math.log(to.z) - Math.log(from.z)) * e);
+      // keep the point under focus steady while zooming
+      const fx = innerWidth / 2, fy = innerHeight / 2;
+      const wx = (fx - from.x) / from.z + ((fx - to.x) / to.z - (fx - from.x) / from.z) * e, wy = (fy - from.y) / from.z + ((fy - to.y) / to.z - (fy - from.y) / from.z) * e;
+      setView({ x: fx - wx * z, y: fy - wy * z, z });
+      if (k < 1) anim = requestAnimationFrame(step); else if (done) done();
+    };
+    anim = requestAnimationFrame(step);
+  }
+  function fitAll() {
+    const x0 = bounds.c0 * CW, y0 = bounds.r0 * CH, W = (bounds.c1 - bounds.c0 + 1) * CW - GAP, H = (bounds.r1 - bounds.r0 + 1) * CH - GAP;
+    const z = Math.min((innerWidth - 60) / W, (innerHeight - 140) / H, innerWidth * .32 / BW);
+    return { x: (innerWidth - W * z) / 2 - x0 * z, y: (innerHeight - 60 - H * z) / 2 - y0 * z, z };
+  }
+  function focusOn(i, widthShare, rightPanel) {
+    const [wx, wy] = cellXY(i), pw = rightPanel ? Math.min(400, innerWidth * .36) : 0;
+    const availW = innerWidth - pw - 80, availH = innerHeight - 80;
+    const z = rightPanel ? Math.min(availW / BW, availH / BH) : innerWidth * widthShare / BW;
+    const cx = rightPanel ? 40 + availW / 2 : innerWidth / 2, cy = rightPanel ? 40 + availH / 2 : innerHeight / 2;
+    return { x: cx - (wx + BW / 2) * z, y: cy - (wy + BH / 2) * z, z };
+  }
+  /* where each board goes: further right the longer they stayed, lower the more they left crooked.
+     Boards that want the same place push each other outward — a cloud, dense where people were alike. */
+  let remote = [];
+  function layout() {
+    const past = MODE === 'live'
+      ? remote.filter(r => !(mine && r.at === mine.at))                                  // the published site: only real people
+      : [...load().filter(r => r.lv && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
+    list = mine ? [mine, ...past] : past;
+    const GW = 54, GH = Math.max(20, Math.round(GW * CW / CH / (innerWidth / innerHeight)));
+    const ld = list.map(r => Math.log(Math.max(20, r.dur))), lo = Math.min(...ld), hi = Math.max(...ld);
+    const R = mulberry(77);
+    const order = list.map((r, i) => i).sort((a, b) => (list[b] === mine) - (list[a] === mine) || R() - .5);
+    occ = new Map(); bounds = { c0: 1e9, c1: -1e9, r0: 1e9, r1: -1e9 };
+    order.forEach(i => {
+      const r = list[i], j = r === mine ? 0 : 1.6;
+      const tc = Math.round((Math.log(Math.max(20, r.dur)) - lo) / (hi - lo || 1) * (GW - 1) + (R() - .5) * j * 2);
+      const tr = Math.round(r.left / N * (GH - 1) + (R() - .5) * j * 2);
+      for (let rad = 0; rad < 80; rad++) {
+        const ring = [];
+        for (let dx = -rad; dx <= rad; dx++) for (let dy = -rad; dy <= rad; dy++) if (Math.max(Math.abs(dx), Math.abs(dy)) === rad) ring.push([dx, dy, dx * dx * .6 + dy * dy + R() * .5]);
+        ring.sort((p, q) => p[2] - q[2]);
+        const hit = ring.find(([dx, dy]) => !occ.has(`${tc + dx},${tr + dy}`));
+        if (hit) { r._gx = tc + hit[0]; r._gy = tr + hit[1]; occ.set(`${r._gx},${r._gy}`, i); break; }
+      }
+      bounds.c0 = Math.min(bounds.c0, r._gx); bounds.c1 = Math.max(bounds.c1, r._gx);
+      bounds.r0 = Math.min(bounds.r0, r._gy); bounds.r1 = Math.max(bounds.r1, r._gy);
+    });
+  }
+
+  /* ---- stepping into one board ---- */
+  function enter(i) {
+    if (i < 0 || i >= list.length) return;
+    cur = i; hover = -1;
+    $('archive').classList.add('focus');
+    play = null;
+    glide(focusOn(i, 0, true), 900, () => { if (cur === i) startPlay(i); });
+    panel(list[i], i);
+  }
+  function back() {
+    if (cur < 0) return;
+    cur = -1; play = null; $('archPanel').classList.remove('on'); $('archive').classList.remove('focus');
+    glide(fitAll(), 1100);
+  }
+  /* ---- watching them try: the session played back, fast ---- */
+  const levels = () => { const e = computeErrors(), tol = LV().tol; return state.tiles.map((t, i) => qz(flaw(e[i], tol))); };
+  const START = () => ARCH.initial || ARCH.start || levels();   // the board as everyone first sees it
+  function simulate(rec, k) {         // demo visitors: a plausible session that ends where their board ended
+    if (rec._sim) return rec._sim;
+    const R = mulberry(9000 + k), lv = START().slice(), ev = [], th = [];
+    const steps = Math.min(rec.corr, 520), w = rec.fixes.map(f => f + .2), ws = w.reduce((a, b) => a + b, 0);
+    const pickW = () => { let x = R() * ws; for (let i = 0; i < N; i++) { x -= w[i]; if (x <= 0) return i; } return N - 1; };
+    const crook = () => [0, 1, 2, 3, 5, 6, 7, 8][Math.floor(R() * 8)];
+    // checking: how often they go back to a shape that is already right. In this demo data, people who
+    // said they have OCD mostly do it more — an illustration of the idea, not a finding.
+    const base = { yes: .6, maybe: .32, no: .06, skip: .25 }[rec.ocd || 'skip'];
+    const pCheck = Math.max(.02, Math.min(.8, base + (R() - .5) * .22));
+    const pickIn = want => {             // weighted pick among the shapes that are (or aren't) straight right now
+      let tot = 0; for (let k = 0; k < N; k++) if ((lv[k] === STRAIGHT) === want) tot += w[k];
+      if (!tot) return pickW();
+      let x = R() * tot; for (let k = 0; k < N; k++) if ((lv[k] === STRAIGHT) === want && (x -= w[k]) <= 0) return k;
+      return pickW();
+    };
+    for (let s = 0; s < steps; s++) {
+      const t = (s + R()) / steps * rec.dur * .86, i = pickIn(R() < pCheck);
+      th.push([t, i]);
+      if (lv[i] === STRAIGHT) { if (R() < .15) { lv[i] = crook(); ev.push([t, i, lv[i]]); } }   // touching a right one: usually nothing changes, sometimes they break it
+      else { lv[i] = R() < .62 ? STRAIGHT : crook(); ev.push([t, i, lv[i]]); }
+      if (R() < .3) { const j = Math.floor(R() * N); if (lv[j] === STRAIGHT) { lv[j] = crook(); ev.push([t + .1, j, lv[j]]); } }   // fixing one breaks another
+    }
+    const rest = []; rec.lv.forEach((l, i) => { if (lv[i] !== l) rest.push(i); });
+    rest.forEach((i, n) => { const t = rec.dur * (.86 + .13 * (n + R()) / rest.length); if (rec.lv[i] === STRAIGHT) th.push([t, i]); ev.push([t, i, rec.lv[i]]); });   // what slid back on its own at the end wasn't touched
+    ev.sort((a, b) => a[0] - b[0]); th.sort((a, b) => a[0] - b[0]);
+    return (rec._sim = { start: START(), ev, th });
+  }
+  /* checking: how often they touched a shape that was already right */
+  function checks(rec, i) {
+    if (rec._chk) return rec._chk;
+    if (!rec.ev && !rec.demo && typeof rec.chk === 'number') return (rec._chk = { n: Math.min(rec.chk, Math.max(1, rec.corr)), of: Math.max(1, rec.corr) });
+    const s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : null;
+    if (!s || !s.th.length) return null;
+    const lv = s.start.slice(); let k = 0, n = 0;
+    s.th.forEach(([t, tile]) => {
+      while (k < s.ev.length && s.ev[k][0] < t) { lv[s.ev[k][1]] = s.ev[k][2]; k++; }
+      if (lv[tile] === STRAIGHT) n++;
+    });
+    const of = Math.max(rec.corr, 1);                 // measured against the corrections they made, so the numbers agree
+    return (rec._chk = { n: Math.min(n, of), of });
+  }
+  async function startPlay(i) {
+    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) Object.assign(list[i], d); }
+    if (cur !== i) return;
+    const rec = list[i], s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : { start: rec.lv.slice(), ev: [], th: [] };
+    play = { i, lv: s.start.slice(), ev: s.ev, th: s.th, k: 0, h: 0, t0: performance.now(), total: Math.min(15000, Math.max(6000, rec.dur * 25)), dur: rec.dur, flash: [], done: false };
+    const tick = () => {
+      if (!play || play.i !== i) return;
+      const now = performance.now(), el = (now - play.t0) / play.total * play.dur;
+      while (play.k < play.ev.length && play.ev[play.k][0] <= el) { const [, k, l] = play.ev[play.k++]; play.lv[k] = l; }
+      while (play.h < play.th.length && play.th[play.h][0] <= el) { play.flash.push([play.th[play.h++][1], now + 260]); }
+      if (play.flash.length > 40) play.flash = play.flash.filter(f => f[1] > now);
+      const head = $('apHead'); if (head) head.setAttribute('x1', (Math.min(1, el / play.dur) * 200).toFixed(1)), head.setAttribute('x2', (Math.min(1, el / play.dur) * 200).toFixed(1));
+      redraw();
+      if (el < play.dur) requestAnimationFrame(tick);
+      else { play.done = true; play.lv = rec.lv.slice(); play.flash = []; const b = $('apAgain'); if (b) b.classList.add('on'); redraw(); }
+    };
+    const b = $('apAgain'); if (b) b.classList.remove('on');
+    requestAnimationFrame(tick);
+  }
+  function panel(rec, i) {
+    const tl = rec.tl || [], P = $('archPanel'), you = rec === mine;
+    const said = { yes: 'has OCD', maybe: 'doesn’t know if they have OCD', no: 'no OCD', skip: 'didn’t say' }[rec.ocd || 'skip'];
+    P.innerHTML = `<div class="ap-top"><span class="arch-k">${i + 1} / ${list.length}</span><button class="ap-x" id="apX">Back · Esc</button></div>
+      <div class="ap-who${you ? ' you' : ''}">${you ? 'You' : rec.name ? esc(rec.name) : `Visitor ${String(i + 1).padStart(3, '0')}`}</div>
+      <div class="ap-when">${you ? 'just now' : fmtAt(rec.at)}${rec.demo ? ' · demo' : ''}${rec.name ? '' : ` · ${said}`}</div>
+      <div class="ap-line-s">${fmtDur(rec.dur)} · ${rec.corr.toLocaleString('en')} corrections · <span style="color:var(--red)">${rec.left} left crooked</span></div>
+      <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
+        <div class="ap-axis"><span>how much of it was right</span><button class="ap-again" id="apAgain">Watch again</button></div></div>
+      ${(() => { const c = checks(rec, i); return c ? `<div class="ap-sec"><div class="arch-k">Fixing what wasn’t broken</div>
+        <div class="ap-big">${c.n.toLocaleString('en')}</div>
+        <div class="ap-txt">times ${you ? 'you' : 'they'} touched a shape that was already right — ${Math.round(c.n / c.of * 100)}% of everything ${you ? 'you' : 'they'} did.</div></div>` : ''; })()}
+      <div class="ap-nav"><button id="apPrev">← Previous</button><button id="apNext">Next →</button></div>`;
+    const svg = svgEl('svg', { viewBox: '0 0 200 40', preserveAspectRatio: 'none', class: 'ap-line' });
+    svgEl('line', { x1: 0, y1: 2, x2: 200, y2: 2, stroke: 'var(--mute)', 'stroke-width': .6, 'stroke-dasharray': '2 3', 'vector-effect': 'non-scaling-stroke' }, svg);
+    if (tl.length > 1) svgEl('polyline', { points: tl.map((v, k) => `${(k / (tl.length - 1) * 200).toFixed(1)},${(38 - v * 36).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--blue)', 'stroke-width': 1.4, 'vector-effect': 'non-scaling-stroke' }, svg);
+    svgEl('line', { id: 'apHead', x1: 0, y1: 0, x2: 0, y2: 40, stroke: 'var(--red)', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }, svg);
+    $('apLine').appendChild(svg);
+    $('apX').onclick = back;
+    $('apAgain').onclick = () => startPlay(i);
+    $('apPrev').onclick = () => enter((i - 1 + list.length) % list.length);
+    $('apNext').onclick = () => enter((i + 1) % list.length);
+    P.classList.add('on');
+  }
+  function hit(px, py) {
+    const wx = (px - V.x) / V.z, wy = (py - V.y) / V.z, c = Math.floor(wx / CW), r = Math.floor(wy / CH);
+    if (wx - c * CW > BW || wy - r * CH > BH) return -1;
+    const i = occ.get(`${c},${r}`);
+    return i !== undefined && !(list[i] === mine && !mine.landed) ? i : -1;
+  }
+  function wire() {
+    if (wired) return; wired = true;
+    const A = $('archive');
+    let drag = null;
+    A.addEventListener('pointerdown', ev => { ev.stopPropagation(); cancelAnimationFrame(anim); drag = { x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, moved: false }; A.setPointerCapture(ev.pointerId); });
+    A.addEventListener('pointermove', ev => {
+      if (!drag) { const h = hit(ev.clientX, ev.clientY); if (h !== hover) { hover = h; A.style.cursor = h >= 0 ? 'pointer' : 'grab'; redraw(); } return; }
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 5) { drag.moved = true; A.classList.add('panning'); }
+      if (drag.moved) setView({ x: drag.vx + dx, y: drag.vy + dy, z: V.z });
+    });
+    A.addEventListener('pointerup', ev => {
+      A.classList.remove('panning');
+      if (drag && !drag.moved) { const i = hit(ev.clientX, ev.clientY); if (i >= 0 && i !== cur) enter(i); else if (cur >= 0) back(); }
+      drag = null;
+    });
+    const zoomAt = (px, py, f) => { cancelAnimationFrame(anim); const z = Math.min(40, Math.max(.05, V.z * f)); setView({ x: px - (px - V.x) * z / V.z, y: py - (py - V.y) * z / V.z, z }); };
+    A.addEventListener('wheel', ev => { ev.preventDefault(); ev.stopPropagation(); if (ev.ctrlKey || (Math.abs(ev.deltaY) > Math.abs(ev.deltaX) && !ev.shiftKey)) zoomAt(ev.clientX, ev.clientY, Math.exp(-ev.deltaY * .0015)); else setView({ x: V.x - ev.deltaX, y: V.y - ev.deltaY, z: V.z }); }, { passive: false });
+    $('azIn').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1.5);
+    $('azOut').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1 / 1.5);
+    $('azAll').onclick = () => (cur >= 0 ? back() : glide(fitAll(), 1000));
+    // compare by what people said about themselves
+    $('archOcd').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      filt = b.dataset.f;
+      $('archOcd').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
+      const grp = list.filter(r => r.ocd === filt), rest = list.filter(r => r.ocd !== filt);
+      const chk = g => median(g.map(r => { const c = checks(r, list.indexOf(r)); return c ? Math.round(c.n / c.of * 100) : 0; }));
+      const line = g => `${fmtDur(median(g.map(r => r.dur)))} · ${median(g.map(r => r.corr))} corrections · ${median(g.map(r => r.left))} left crooked · ${chk(g)}% re-fixing what was right`;
+      const name = { yes: 'Have OCD', maybe: 'Don’t know', no: 'No OCD' }[filt];
+      $('archStat').innerHTML = filt === 'all' ? '' : `${name} (${grp.length}): ${line(grp)} &nbsp;—&nbsp; everyone else (${rest.length}): ${line(rest)}${grp.every(r => r.demo) ? ' &nbsp;· demo data' : ''}`;
+      $('archStat').classList.toggle('on', filt !== 'all');
+      redraw();
+    }));
+    addEventListener('keydown', ev => {
+      if (!A.classList.contains('on')) return;
+      if (ev.key === 'Escape') back();
+      if (cur >= 0 && ev.key === 'ArrowRight') enter((cur + 1) % list.length);
+      if (cur >= 0 && ev.key === 'ArrowLeft') enter((cur - 1 + list.length) % list.length);
+    });
+    addEventListener('resize', () => { if (!A.classList.contains('on')) return; sizeCanvas(); setView(cur >= 0 ? focusOn(cur, 0, true) : fitAll()); });
+    let idle = performance.now();
+    ['pointermove', 'wheel', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, () => { idle = performance.now(); }, { passive: true }));
+    setInterval(() => { if (A.classList.contains('on') && performance.now() - idle > 180000) location.reload(); }, 5000);
+  }
+  function sizeCanvas() {
+    dpr = Math.min(2, devicePixelRatio || 1);
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+  }
+
+  /* ======================================================
+     The moment you stop: your board shrinks, and goes in among everyone else's.
+     ====================================================== */
+  async function arrive() {
+    resetView(false);
+    sprites = makeSprites();
+    save();
+    if (MODE === 'live') remote = await Remote.list();
+    layout();
+    cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
+    const mi = list.indexOf(mine);
+    // the camera starts close, on the empty place that's waiting for you
+    V = focusOn(mi, .3, false);
+    await ready();
+    draw();
+    warm();
+    const A = $('archive');
+    A.classList.add('on');
+    // fly the real board into its place
+    const frameEl = document.querySelector('.frame'), stageEl = document.querySelector('.stage');
+    const fr = frameEl.getBoundingClientRect(), gr = $('grid').getBoundingClientRect();
+    const [wx, wy] = cellXY(mi);
+    const tx0 = V.x + (wx + PAD) * V.z, ty0 = V.y + (wy + PAD) * V.z, tw = COLS * TS * V.z;
+    const s = tw / gr.width;
+    stageEl.style.zIndex = 40; stageEl.style.pointerEvents = 'none';
+    document.querySelectorAll('.chrome, .clock, .zoomer, .notes').forEach(e => { e.style.transition = 'opacity 600ms ease'; e.style.opacity = 0; });
+    frameEl.style.transformOrigin = '0 0';
+    frameEl.style.transition = 'transform 1700ms cubic-bezier(.65,0,.25,1)';
+    requestAnimationFrame(() => {
+      frameEl.style.transform = `translate(${tx0 - fr.left - (gr.left - fr.left) * s}px, ${ty0 - fr.top - (gr.top - fr.top) * s}px) scale(${s})`;
+    });
+    setTimeout(() => {
+      mine.landed = true; redraw();
+      stageEl.style.transition = 'opacity 500ms ease'; stageEl.style.opacity = 0;
+      setTimeout(() => { stageEl.style.display = 'none'; }, 520);
+      // and then you fall away from it, until it is one among hundreds
+      setTimeout(() => glide(fitAll(), 6500, () => { $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); }), 900);
+    }, 1800);
+  }
+  async function show() {           // open the wall without the arrival (presenter key)
+    if (!sprites) sprites = makeSprites();
+    if (MODE === 'live') remote = await Remote.list();
+    layout();
+    cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
+    ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); });
+  }
+  function hide() { $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
+  return { save, show, hide, arrive, demos, levels };
+})();
+
+/* ======================================================
+   Rituals — sudden compulsions that lock the field.
+   Do it exactly, or start again. Sometimes, even when it was right,
+   it doesn't feel right — and you do it again.
+   ====================================================== */
+const R = { el: $('ritual'), box: $('rBox'), text: $('rText'), sub: $('rSub'), pips: $('rPips'), no: $('rNo') };
+const NAME = { tl: 'top-left', tr: 'top-right', br: 'bottom-right', bl: 'bottom-left', c: 'centre', left: 'left', right: 'right' };
+const POS = {
+  tl: ['calc(var(--z) / 2)', 'calc(var(--z) / 2)'],
+  tr: ['calc(100% - var(--z) / 2)', 'calc(var(--z) / 2)'],
+  br: ['calc(100% - var(--z) / 2)', 'calc(100% - var(--z) / 2)'],
+  bl: ['calc(var(--z) / 2)', 'calc(100% - var(--z) / 2)'],
+  c: ['50%', '50%'],
+  left: ['calc(var(--z) / 2)', '50%'],
+  right: ['calc(100% - var(--z) / 2)', '50%']
+};
+const cap = w => w[0].toUpperCase() + w.slice(1);
+let ritualTimer = null, lastRitual = 0;
+
+function scheduleRitual() {
+  return;   // pop-up tasks removed
+  clearTimeout(ritualTimer);
+  if (state.level < 1) return;              // the first stage is a lesson, not a test
+  const [a, b] = [[24, 36], [16, 26], [11, 19], [7, 13]][tier()];
+  ritualTimer = setTimeout(() => {
+    if (!state.started || state.locked || state.ritual) { scheduleRitual(); return; }
+    startRitual();
+  }, rand(a, b) * 1000);
+}
+
+// near success, the compulsions come more often
+function maybeProgressRitual() {
+  return;   // pop-up tasks removed
+  if (state.locked || state.ritual || state.level < 1) return;
+  const tot = state.tiles.length, ok = state.tiles.filter(t => t.perfect).length;
+  if (ok / tot >= .6 && ok < tot && performance.now() - lastRitual > 9000 && Math.random() < .3) {
+    setTimeout(() => { if (!state.locked && !state.ritual) startRitual(); }, 250);
+  }
+}
+
+function makeRitual(forced) {
+  const type = forced || pick(['tap', 'clockwise', 'still', 'rhythm', 'mirror',
+    'trace', 'trace', 'clean', 'clean', 'dwell', 'dwell', 'putback', 'putback',
+    'lineup', 'lineup', 'hold', 'straighten', 'straighten']);
+  if (INTERACTIVE[type]) return INTERACTIVE[type]();
+  if (type === 'tap') {
+    const where = pick(['tl', 'tr', 'br', 'bl', 'c']), need = pick([4, 4, 8]);
+    return { type, seq: Array(need).fill(where),
+      text: `Touch the ${NAME[where]}${where === 'c' ? '' : ' corner'}.`,
+      sub: `${need === 4 ? 'Four' : 'Eight'} times. Nothing else.` };
+  }
+  if (type === 'clockwise') {
+    const o = ['tl', 'tr', 'br', 'bl'], k = r3(4), seq = [...o.slice(k), ...o.slice(0, k)];
+    seq.push(seq[0]);
+    return { type, seq, text: 'Touch the four corners.', sub: `Clockwise, from the ${NAME[seq[0]]}. End where you began.` };
+  }
+  if (type === 'mirror') {
+    const a = pick(['left', 'right']), b = a === 'left' ? 'right' : 'left', seq = [];
+    for (let i = 0; i < 3; i++) seq.push(a, b);
+    return { type, seq, text: `${cap(a)} edge. ${cap(b)} edge.`, sub: 'Alternate. Three times each.' };
+  }
+  if (type === 'still') return { type, need: 4, text: 'Do not move.', sub: 'Four seconds. Not even a little.' };
+  return { type: 'rhythm', need: 8, text: 'Press space eight times.', sub: 'Evenly. Not faster, not slower.' };
+}
+
+function startRitual(again, forced) {
+  Voice.hush();
+  Sound.arrive();
+  const d = state.drag;
+  if (d) {
+    try { d.tile.el.releasePointerCapture(d.id); } catch (e) {}
+    d.tile.el.classList.remove('active');
+    if (d.moved) { state.corrections++; }
+    state.drag = null;
+  }
+  if (!again) { state.ritual = makeRitual(forced); state.rituals++; counters(); }
+  const r = state.ritual;
+  r.count = 0; r.times = []; r.done = false; r.px = undefined;
+  R.no.textContent = pad(state.rituals, 2);
+  R.text.textContent = r.text;
+  R.sub.textContent = again ? 'It didn’t feel right. Again.' : r.sub;
+  R.sub.classList.toggle('err', !!again);
+  clearTimeout(r.subT);
+  if (again) r.subT = setTimeout(() => { R.sub.textContent = r.sub; R.sub.classList.remove('err'); }, 1800);
+  R.pips.innerHTML = '<i></i>'.repeat(r.seq ? r.seq.length : r.need);
+  R.el.classList.toggle('interactive', !!r.interactive);
+  clearStage();
+  drawMarks();
+  R.el.hidden = false;           // no fade — it simply arrives
+  if (r.interactive) r.setup();
+  if (r.type === 'still') armStill();
+}
+
+function drawMarks() {
+  R.el.querySelectorAll('.r-mark').forEach(m => m.remove());
+  const r = state.ritual;
+  if (!r.seq) return;
+  [...new Set(r.seq)].forEach(k => {
+    const m = document.createElement('i');
+    m.className = 'r-mark' + (k === 'left' || k === 'right' ? ' edge' : '');
+    m.dataset.k = k;
+    m.style.left = POS[k][0];
+    m.style.top = POS[k][1];
+    R.el.appendChild(m);
+  });
+  markNext();
+}
+function markNext() {
+  const r = state.ritual;
+  R.el.querySelectorAll('.r-mark').forEach(m => m.classList.toggle('next', !!r.seq && m.dataset.k === r.seq[r.count]));
+}
+function pips() {
+  const r = state.ritual;
+  [...R.pips.children].forEach((p, i) => p.classList.toggle('on', i < r.count));
+}
+function flash(k) {
+  const m = R.el.querySelector(`.r-mark[data-k="${k}"]`);
+  if (!m) return;
+  m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+}
+
+function zoneAt(x, y) {
+  const W = innerWidth, H = innerHeight, z = Math.max(90, Math.min(W, H) * .16);
+  const L = x < z, Rt = x > W - z, T = y < z, B = y > H - z, out = new Set();
+  if (L && T) out.add('tl');
+  if (Rt && T) out.add('tr');
+  if (Rt && B) out.add('br');
+  if (L && B) out.add('bl');
+  if (L) out.add('left');
+  if (Rt) out.add('right');
+  if (Math.abs(x - W / 2) < z / 2 && Math.abs(y - H / 2) < z / 2) out.add('c');
+  return out;
+}
+
+function failRitual(msg, keep) {
+  const r = state.ritual;
+  if (!keep) { r.count = 0; r.times = []; if (r.interactive && r.reset) r.reset(); }
+  pips(); markNext();
+  const now = performance.now();
+  if (now - (r.failAt || 0) < 600) return;   // don't stutter on repeated errors
+  r.failAt = now;
+  Sound.wrong();
+  R.sub.textContent = msg || 'Wrong. From the beginning.';
+  R.sub.classList.add('err');
+  R.box.classList.remove('shake'); void R.box.offsetWidth; R.box.classList.add('shake');
+  clearTimeout(r.subT);
+  r.subT = setTimeout(() => { if (state.ritual === r) { R.sub.textContent = r.sub; R.sub.classList.remove('err'); } }, 1500);
+}
+
+function completeRitual() {
+  const r = state.ritual;
+  clearInterval(r.iv);
+  cancelAnimationFrame(r.raf);
+  if (r.interactive) setCount(r.seq ? r.seq.length : r.need);
+  r.done = true;
+  Sound.right();
+  const doubt = !r.doubted && Math.random() < .22 + tier() * .08;
+  setTimeout(() => {
+    if (state.ritual !== r) return;
+    if (doubt) { r.doubted = true; startRitual(true); }
+    else endRitual();
+  }, 450);
+}
+
+function endRitual() {
+  const r = state.ritual;
+  if (r) { clearInterval(r.iv); clearTimeout(r.subT); cancelAnimationFrame(r.raf); }
+  state.ritual = null;
+  R.el.hidden = true;
+  R.el.classList.remove('interactive');
+  clearStage();
+  lastRitual = performance.now();
+  scheduleRitual();
+  setTimeout(() => Voice.say('ritual'), 800);
+}
+
+/* stillness */
+function armStill() {
+  const r = state.ritual;
+  clearInterval(r.iv);
+  r.t0 = performance.now(); r.count = 0; pips();
+  r.iv = setInterval(() => {
+    const sec = Math.min(r.need, Math.floor((performance.now() - r.t0) / 1000));
+    if (sec !== r.count) { r.count = sec; pips(); if (sec >= r.need) completeRitual(); }
+  }, 80);
+}
+function resetStill() {
+  const r = state.ritual;
+  if (r.done) return;
+  if (performance.now() - r.t0 > 300) failRitual('You moved. Again.');
+  armStill();
+}
+
+/* rhythm */
+function rhythmPress() {
+  const r = state.ritual, now = performance.now(), t = r.times;
+  if (t.length && now - t[t.length - 1] > 2200) t.length = 0;
+  t.push(now);
+  if (t.length >= 3) {
+    const base = t[1] - t[0], cur = t[t.length - 1] - t[t.length - 2];
+    if (Math.abs(cur - base) / base > .28) { failRitual('Uneven. From the beginning.'); return; }
+  }
+  r.count = t.length; pips();
+  if (r.count >= r.need) completeRitual();
+}
+
+/* ======================================================
+   Interactive rituals — hover, trace, drag, rotate, hold.
+   Each one: setup() builds it, reset() restarts it after a failure,
+   down/move/up receive the pointer.
+   ====================================================== */
+const RS = $('rSvg');
+const CX = () => innerWidth / 2;
+const CY = () => innerHeight / 2 + innerHeight * .07;
+const minWH = () => Math.min(innerWidth, innerHeight);
+function clearStage() { RS.innerHTML = ''; RS.setAttribute('viewBox', `0 0 ${innerWidth} ${innerHeight}`); }
+function setCount(n) {
+  const r = state.ritual;
+  if (!r) return;
+  r.count = Math.max(0, Math.min(n, r.seq ? r.seq.length : r.need));
+  pips();
+}
+const nudge = msg => failRitual(msg, true);
+const SWISS = ['var(--blue)', 'var(--red)', 'var(--green)', 'var(--yellow)'];
+
+const INTERACTIVE = {
+
+  /* hover along a circle, clockwise, without leaving it */
+  trace: () => ({
+    type: 'trace', interactive: true, need: 8,
+    text: 'Trace the circle.', sub: 'Clockwise. Stay on the line. All the way round.',
+    setup() {
+      this.R = minWH() * .19; this.band = Math.max(14, this.R * .13);
+      svgEl('circle', { cx: CX(), cy: CY(), r: this.R, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1, opacity: .3 }, RS);
+      svgEl('circle', { cx: CX(), cy: CY(), r: this.R, fill: 'none', stroke: 'var(--ink)', 'stroke-width': this.band * 2, opacity: .035 }, RS);
+      this.prog = svgEl('circle', { cx: CX(), cy: CY(), r: this.R, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 3, pathLength: 360, 'stroke-dasharray': '0 360' }, RS);
+      this.reset();
+    },
+    reset() { this.acc = 0; this.last = null; if (this.prog) this.prog.setAttribute('stroke-dasharray', '0 360'); setCount(0); },
+    move(x, y) {
+      const dx = x - CX(), dy = y - CY();
+      if (Math.abs(Math.hypot(dx, dy) - this.R) > this.band) {
+        if (this.acc > 10) failRitual('You left the line. Again.'); else this.reset();
+        return;
+      }
+      const a = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (this.last === null) {
+        this.last = a;
+        this.prog.setAttribute('transform', `rotate(${a} ${CX()} ${CY()})`);
+        return;
+      }
+      let da = a - this.last;
+      if (da > 180) da -= 360;
+      if (da < -180) da += 360;
+      this.last = a;
+      if (da < -4) { failRitual('Wrong direction. Again.'); return; }
+      if (da > 0) this.acc += da;
+      this.prog.setAttribute('stroke-dasharray', `${Math.min(360, this.acc)} 360`);
+      setCount(Math.floor(this.acc / 360 * this.need));
+      if (this.acc >= 360) completeRitual();
+    }
+  }),
+
+  /* wipe every speck by hovering — and some come back */
+  clean: () => ({
+    type: 'clean', interactive: true, need: 8,
+    text: 'Clean it.', sub: 'Every speck. Move over it to wipe.',
+    setup() {
+      const w = Math.min(innerWidth * .5, 460), h = w * .6, x0 = CX() - w / 2, y0 = CY() - h / 2;
+      this.box = [x0, y0, w, h];
+      svgEl('rect', { x: x0, y: y0, width: w, height: h, fill: 'var(--tile)' }, RS);
+      this.rad = Math.max(20, w * .055);
+      this.specks = []; this.left = 0; this.total = 0; this.spawned = 0;
+      const n = 70 + tier() * 30;
+      for (let i = 0; i < n; i++) this.speck();
+      this.cur = svgEl('circle', { cx: -99, cy: -99, r: this.rad, fill: 'none', stroke: 'var(--ink)', 'stroke-width': .7, opacity: .35 }, RS);
+      // contamination returns when you are almost done
+      this.iv = setInterval(() => {
+        if (this.left > 0 && this.left <= 5 && this.spawned < 4 && Math.random() < .3) { this.speck(); this.spawned++; this.progress(); }
+      }, 1100);
+      this.progress();
+    },
+    speck() {
+      const [x0, y0, w, h] = this.box;
+      const sp = { x: x0 + rand(5, w - 5), y: y0 + rand(5, h - 5) };
+      sp.el = svgEl('circle', { cx: sp.x, cy: sp.y, r: rand(.8, 2.6), fill: 'var(--ink)', opacity: rand(.35, .9) }, RS);
+      if (this.cur) RS.appendChild(this.cur);
+      this.specks.push(sp); this.left++; this.total++;
+    },
+    progress() { setCount(Math.floor((1 - this.left / this.total) * this.need)); },
+    reset() {},
+    move(x, y) {
+      this.cur.setAttribute('cx', x); this.cur.setAttribute('cy', y);
+      const r2 = this.rad * this.rad;
+      for (const sp of this.specks) {
+        if (sp.dead) continue;
+        if ((x - sp.x) ** 2 + (y - sp.y) ** 2 < r2) {
+          sp.dead = true; this.left--;
+          sp.el.style.transition = 'opacity 280ms'; sp.el.setAttribute('opacity', 0);
+        }
+      }
+      this.progress();
+      if (this.left === 0) completeRitual();
+    }
+  }),
+
+  /* rest the cursor on numbered points, in order, one full second each */
+  dwell: () => ({
+    type: 'dwell', interactive: true, need: 5,
+    text: 'Rest on each point.', sub: 'In order. One full second each. Don’t touch the others.',
+    setup() {
+      const n = this.need, span = Math.min(innerWidth * .62, 540);
+      const order = [...Array(n).keys()].sort(() => Math.random() - .5);
+      this.pts = [];
+      for (let i = 0; i < n; i++) {
+        const x = CX() - span / 2 + span * i / (n - 1), y = CY() + (i % 2 ? -1 : 1) * rand(15, 60);
+        const g = svgEl('g', {}, RS);
+        svgEl('circle', { cx: x, cy: y, r: 19, fill: 'var(--tile)', stroke: 'var(--ink)', 'stroke-width': 1, 'stroke-opacity': .3 }, g);
+        const arc = svgEl('circle', { cx: x, cy: y, r: 19, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 3, pathLength: 360, 'stroke-dasharray': '0 360', transform: `rotate(-90 ${x} ${y})` }, g);
+        const t = svgEl('text', { x, y: y + 4, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--ink)' }, g);
+        t.textContent = order[i] + 1;
+        this.pts[order[i]] = { x, y, g, arc };
+      }
+      this.reset();
+      this.iv = setInterval(() => this.tick(), 30);
+    },
+    reset() {
+      this.idx = 0; this.enter = null; setCount(0);
+      (this.pts || []).forEach(p => { p.arc.setAttribute('stroke-dasharray', '0 360'); p.g.setAttribute('opacity', 1); });
+    },
+    move(x, y) { this.x = x; this.y = y; },
+    tick() {
+      if (this.x === undefined) return;
+      const near = p => Math.hypot(this.x - p.x, this.y - p.y) < 23;
+      const wrong = this.pts.some((p, j) => j > this.idx && near(p));
+      if (wrong && !this.wasWrong) { this.wasWrong = true; failRitual('Not that one. From the beginning.'); return; }
+      this.wasWrong = wrong;
+      const p = this.pts[this.idx];
+      if (!p) return;
+      if (near(p)) {
+        if (this.enter === null) this.enter = performance.now();
+        const f = Math.min(1, (performance.now() - this.enter) / 1000);
+        p.arc.setAttribute('stroke-dasharray', `${f * 360} 360`);
+        if (f >= 1) {
+          p.g.setAttribute('opacity', .22); this.idx++; this.enter = null; setCount(this.idx);
+          if (this.idx >= this.need) completeRitual();
+        }
+      } else if (this.enter !== null) {
+        this.enter = null; p.arc.setAttribute('stroke-dasharray', '0 360');
+      }
+    }
+  }),
+
+  /* drag a square back into its outline — to the pixel */
+  putback: () => ({
+    type: 'putback', interactive: true, need: 6,
+    text: 'Put it back.', sub: 'Exactly where it was. Hold Shift to move slowly.',
+    setup() {
+      this.s = minWH() * .085;
+      this.tx = CX() + rand(-1, 1) * innerWidth * .1;
+      this.ty = CY() + rand(-1, 1) * innerHeight * .05;
+      svgEl('rect', { x: this.tx - this.s / 2, y: this.ty - this.s / 2, width: this.s, height: this.s, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, RS);
+      this.sq = svgEl('rect', { width: this.s, height: this.s, fill: pick(SWISS) }, RS);
+      this.read = svgEl('text', { x: CX(), y: innerHeight - 70, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--mute)' }, RS);
+      this.reset();
+    },
+    reset() {
+      const a = rand(0, Math.PI * 2), d = minWH() * .2;
+      this.x = this.tx + Math.cos(a) * d; this.y = this.ty + Math.sin(a) * d * .6;
+      this.drag = null; this.place();
+    },
+    err() { return Math.hypot(this.x - this.tx, this.y - this.ty); },
+    place() {
+      this.sq.setAttribute('x', this.x - this.s / 2); this.sq.setAttribute('y', this.y - this.s / 2);
+      const e = this.err();
+      this.read.textContent = `OFFSET  ${e.toFixed(1)} PX`;
+      setCount(Math.floor((1 - Math.min(1, e / (this.s * 2))) * this.need));
+    },
+    down(x, y) {
+      if (Math.abs(x - this.x) < this.s / 2 + 8 && Math.abs(y - this.y) < this.s / 2 + 8) { this.drag = { lx: x, ly: y }; return true; }
+    },
+    move(x, y, ev) {
+      if (!this.drag) return;
+      const f = ev.shiftKey ? .15 : 1;
+      this.x += (x - this.drag.lx) * f; this.y += (y - this.drag.ly) * f;
+      this.drag.lx = x; this.drag.ly = y;
+      this.place();
+    },
+    up() {
+      if (!this.drag) return;
+      this.drag = null;
+      const e = this.err();
+      if (e <= 1.5) { this.x = this.tx; this.y = this.ty; this.place(); completeRitual(); }
+      else if (e < this.s) nudge(`Off by ${e.toFixed(1)} px. Not exactly.`);
+    }
+  }),
+
+  /* drag dots vertically onto a line — and one slips when you let go */
+  lineup: () => ({
+    type: 'lineup', interactive: true, need: 4,
+    text: 'Line them up.', sub: 'Drag each one onto the line. Exactly on it.',
+    setup() {
+      const span = Math.min(innerWidth * .56, 480);
+      this.ly = CY();
+      svgEl('line', { x1: CX() - span / 2 - 50, y1: this.ly, x2: CX() + span / 2 + 50, y2: this.ly, stroke: 'var(--ink)', 'stroke-width': 1, opacity: .45 }, RS);
+      this.items = SWISS.map((c, i) => ({ x: CX() - span / 2 + span * i / 3, el: svgEl('circle', { cx: CX() - span / 2 + span * i / 3, cy: 0, r: 11, fill: c }, RS) }));
+      this.reset();
+    },
+    reset() {
+      this.items.forEach(it => {
+        do { it.y = this.ly + rand(-1, 1) * innerHeight * .14; } while (Math.abs(it.y - this.ly) < 25);
+        it.el.setAttribute('cy', it.y);
+      });
+      this.drag = null; this.score();
+    },
+    on(it) { return Math.abs(it.y - this.ly) < 1.2; },
+    score() { const ok = this.items.filter(it => this.on(it)).length; setCount(ok); return ok; },
+    down(x, y) {
+      const it = this.items.find(it => Math.hypot(x - it.x, y - it.y) < 22);
+      if (it) { this.drag = { it, ly: y }; return true; }
+    },
+    move(x, y, ev) {
+      if (!this.drag) return;
+      const it = this.drag.it;
+      it.y += (y - this.drag.ly) * (ev.shiftKey ? .15 : 1); this.drag.ly = y;
+      it.el.setAttribute('cy', it.y); this.score();
+    },
+    up() {
+      if (!this.drag) return;
+      const it = this.drag.it; this.drag = null;
+      if (this.score() === this.items.length) { completeRitual(); return; }
+      const others = this.items.filter(o => o !== it && this.on(o));
+      if (this.on(it) && others.length && Math.random() < .35) {
+        setTimeout(() => {
+          if (state.ritual !== this || this.done) return;
+          const o = pick(others); o.y += pick([-1, 1]) * rand(2, 4); o.el.setAttribute('cy', o.y);
+          this.score(); nudge('Something moved.');
+        }, 450);
+      }
+    }
+  }),
+
+  /* press and hold, release at exactly N seconds — the pulse lies */
+  hold: () => {
+    const target = pick([3, 4]);
+    return {
+      type: 'hold', interactive: true, need: 1,
+      text: `Hold. Let go at exactly ${target === 3 ? 'three' : 'four'}.`, sub: 'Press anywhere and count in your head.',
+      setup() {
+        this.r0 = minWH() * .08;
+        svgEl('circle', { cx: CX(), cy: CY(), r: this.r0, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1, opacity: .4 }, RS);
+        this.dot = svgEl('circle', { cx: CX(), cy: CY(), r: 0, fill: 'var(--ink)' }, RS);
+        this.read = svgEl('text', { x: CX(), y: CY() + this.r0 + 34, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--mute)' }, RS);
+        this.reset();
+      },
+      reset() { this.t0 = null; cancelAnimationFrame(this.raf); if (this.dot) this.dot.setAttribute('r', 0); },
+      down() {
+        this.t0 = performance.now(); this.read.textContent = '';
+        const tick = () => {
+          const t = (performance.now() - this.t0) / 1000;   // pulses at 1.13 Hz — not quite seconds
+          this.dot.setAttribute('r', (this.r0 * .55 * (.5 + .5 * Math.sin(t * Math.PI * 2 * 1.13))).toFixed(2));
+          this.raf = requestAnimationFrame(tick);
+        };
+        tick();
+        return true;
+      },
+      up() {
+        if (this.t0 === null) return;
+        const t = (performance.now() - this.t0) / 1000;
+        this.reset();
+        this.read.textContent = `${t.toFixed(2)} S`;
+        if (Math.abs(t - target) <= .12) completeRitual();
+        else failRitual(`${t.toFixed(2)} seconds. Again.`);
+      }
+    };
+  },
+
+  /* rotate a bar until it is level — to the hundredth of a degree */
+  straighten: () => ({
+    type: 'straighten', interactive: true, need: 6,
+    text: 'Straighten it.', sub: 'Drag sideways to rotate. Shift for fine. Level means level.',
+    setup() {
+      const L = Math.min(innerWidth * .4, 380);
+      svgEl('line', { x1: CX() - L / 2 - 34, y1: CY(), x2: CX() - L / 2 - 12, y2: CY(), stroke: 'var(--ink)', opacity: .45 }, RS);
+      svgEl('line', { x1: CX() + L / 2 + 12, y1: CY(), x2: CX() + L / 2 + 34, y2: CY(), stroke: 'var(--ink)', opacity: .45 }, RS);
+      this.bar = svgEl('rect', { x: CX() - L / 2, y: CY() - 3, width: L, height: 6, fill: pick(SWISS) }, RS);
+      this.read = svgEl('text', { x: CX(), y: CY() + 52, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--mute)' }, RS);
+      this.reset();
+    },
+    reset() { this.a = pick([-1, 1]) * rand(6, 18); this.drag = null; this.draw(); },
+    draw() {
+      this.bar.setAttribute('transform', `rotate(${this.a} ${CX()} ${CY()})`);
+      this.read.textContent = `${this.a >= 0 ? '+' : '−'}${Math.abs(this.a).toFixed(2)}°`;
+      setCount(Math.floor((1 - Math.min(1, Math.abs(this.a) / 18)) * this.need));
+    },
+    down(x) { this.drag = { lx: x }; return true; },
+    move(x, y, ev) {
+      if (!this.drag) return;
+      this.a += (x - this.drag.lx) * .08 * (ev.shiftKey ? .12 : 1); this.drag.lx = x; this.draw();
+    },
+    up() {
+      if (!this.drag) return;
+      this.drag = null;
+      if (Math.abs(this.a) < .05) { this.a = 0; this.draw(); completeRitual(); }
+      else if (Math.abs(this.a) < .8) nudge('Almost. Almost isn’t level.');
+    }
+  })
+};
+
+window.addEventListener('pointermove', ev => {
+  const r = state.ritual;
+  if (r && r.interactive && !r.done && r.move) r.move(ev.clientX, ev.clientY, ev);
+});
+const ritualUp = ev => {
+  const r = state.ritual;
+  if (r && r.interactive && !r.done && r.up) r.up(ev.clientX, ev.clientY, ev);
+};
+window.addEventListener('pointerup', ritualUp);
+window.addEventListener('pointercancel', ritualUp);
+
+R.el.addEventListener('pointerdown', ev => {
+  const r = state.ritual;
+  if (!r || r.done) return;
+  ev.preventDefault();
+  if (r.interactive) {
+    if (r.down && r.down(ev.clientX, ev.clientY, ev)) { try { R.el.setPointerCapture(ev.pointerId); } catch (e) {} }
+    if (r.move) r.move(ev.clientX, ev.clientY, ev);
+    return;
+  }
+  if (r.type === 'still') { resetStill(); return; }
+  if (r.type === 'rhythm') { rhythmPress(); return; }   // taps count on touch screens
+  const want = r.seq[r.count];
+  if (zoneAt(ev.clientX, ev.clientY).has(want)) {
+    r.count++; flash(want); pips(); markNext();
+    if (r.count >= r.seq.length) completeRitual();
+  } else failRitual();
+});
+
+window.addEventListener('pointermove', ev => {
+  const r = state.ritual;
+  if (!r || r.type !== 'still' || r.done) return;
+  if (r.px === undefined) { r.px = ev.clientX; r.py = ev.clientY; return; }
+  if (Math.hypot(ev.clientX - r.px, ev.clientY - r.py) > 4) {
+    r.px = ev.clientX; r.py = ev.clientY;
+    resetStill();
+  }
+});
+
+/* ======================================================
+   Zoom & pan — look closer at a field that keeps shrinking.
+   Wheel / pinch zooms toward the pointer. Drag the background
+   (or hold Space, or middle-drag) to move around.
+   ====================================================== */
+const view = $('view'), stage = document.querySelector('.stage'), frame = document.querySelector('.frame');
+const Z = { z: 1, x: 0, y: 0 };
+let pan = null, pinch = null, spaceDown = false;
+const touches = new Map();
+const maxZoom = () => 6;
+
+function applyView(animate) {
+  const W = frame.offsetWidth, H = frame.offsetHeight;
+  Z.z = Math.min(maxZoom(), Math.max(1, Z.z));
+  Z.x = Math.min(0, Math.max(W - W * Z.z, Z.x));
+  Z.y = Math.min(0, Math.max(H - H * Z.z, Z.y));
+  view.style.transition = animate ? 'transform 650ms cubic-bezier(.65,0,.15,1)' : 'none';
+  view.style.transform = `translate(${Z.x}px, ${Z.y}px) scale(${Z.z})`;
+  $('zread').textContent = `${Z.z.toFixed(1)}×`;
+  stage.classList.toggle('zoomed', Z.z > 1.001 || spaceDown);
+}
+function zoomAt(px, py, factor, animate) {
+  const r = frame.getBoundingClientRect();
+  const fx = px - r.left, fy = py - r.top;
+  const cx = (fx - Z.x) / Z.z, cy = (fy - Z.y) / Z.z;
+  const nz = Math.min(maxZoom(), Math.max(1, Z.z * factor));
+  Z.x = fx - cx * nz; Z.y = fy - cy * nz; Z.z = nz;
+  applyView(animate);
+}
+function zoomCenter(factor) {
+  const r = frame.getBoundingClientRect();
+  zoomAt(r.left + r.width / 2, r.top + r.height / 2, factor, true);
+}
+function resetView(animate) { Z.z = 1; Z.x = 0; Z.y = 0; applyView(animate); }
+const blocked = () => state.ritual || state.locked;
+
+function cancelTileDrag() {
+  const d = state.drag;
+  if (!d) return;
+  try { d.tile.el.releasePointerCapture(d.id); } catch (e) {}
+  d.tile.el.classList.remove('active');
+  if (d.moved) { state.corrections++; counters(); }
+  state.drag = null;
+}
+
+window.addEventListener('wheel', ev => {
+  if (blocked()) return;
+  ev.preventDefault();
+  const dy = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY;
+  zoomAt(ev.clientX, ev.clientY, Math.exp(-dy * (ev.ctrlKey ? .01 : .0016)));
+}, { passive: false });
+
+// capture phase: decide pan / pinch before a tile grabs the pointer
+stage.addEventListener('pointerdown', ev => {
+  if (blocked()) return;
+  if (ev.pointerType === 'touch') {
+    touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (touches.size === 2) {
+      cancelTileDrag(); pan = null;
+      const [a, b] = [...touches.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      ev.stopPropagation(); ev.preventDefault();
+      return;
+    }
+  }
+  const onTile = ev.target.closest && ev.target.closest('.tile');
+  if (ev.button === 1 || spaceDown || (!onTile && Z.z > 1.001)) {
+    ev.preventDefault(); ev.stopPropagation();
+    pan = { id: ev.pointerId, x: ev.clientX, y: ev.clientY };
+    try { stage.setPointerCapture(ev.pointerId); } catch (e) {}
+    stage.classList.add('panning');
+  }
+}, true);
+
+window.addEventListener('pointermove', ev => {
+  if (touches.has(ev.pointerId)) touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+  if (pinch && touches.size >= 2) {
+    const [a, b] = [...touches.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    Z.x += mx - pinch.mx; Z.y += my - pinch.my;
+    zoomAt(mx, my, d / pinch.d);
+    Object.assign(pinch, { d, mx, my });
+    return;
+  }
+  if (pan && ev.pointerId === pan.id) {
+    Z.x += ev.clientX - pan.x; Z.y += ev.clientY - pan.y;
+    pan.x = ev.clientX; pan.y = ev.clientY;
+    applyView();
+  }
+});
+const endPointer = ev => {
+  touches.delete(ev.pointerId);
+  if (touches.size < 2) pinch = null;
+  if (pan && ev.pointerId === pan.id) { pan = null; stage.classList.remove('panning'); }
+};
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
+
+document.addEventListener('keydown', ev => {
+  if (ev.key === ' ' && !state.ritual) { ev.preventDefault(); if (!spaceDown) { spaceDown = true; applyView(); } }
+});
+document.addEventListener('keyup', ev => {
+  if (ev.key === ' ') { spaceDown = false; applyView(); }
+});
+window.addEventListener('resize', () => { sizeFrame(); applyView(); });
+
+$('zin').addEventListener('click', () => { if (!blocked()) zoomCenter(1.5); });
+$('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5); });
+$('zreset').addEventListener('click', () => { if (!blocked()) resetView(true); });
+
+/* ======================================================
+   The inner voice — two lines that argue.
+   The first one knows better. The second one always answers.
+   With every stage the first grows quieter and the second louder,
+   until it no longer lets the first one finish.
+   ====================================================== */
+/* ======================================================
+   One voice. It doesn't converse — it presses.
+   Not insults: doubt, urgency, the feeling that something is still off.
+   Every line is set off by something you just did, and it gets more insistent over time.
+   ====================================================== */
+const VOICE_LINES = {
+  perfect: {                // you got a tile right
+    early: ['Is it, though?', 'Look again.', 'Are you sure?', 'Something is still off.', 'It doesn’t feel right.'],
+    late:  ['It moved. Did you see it move?', 'Not quite. Not quite.', 'You’ll know if you leave it.', 'Check it once more.', 'It feels wrong. It feels wrong.']
+  },
+  check: {                  // you touched a tile that was already right
+    early: ['Just to be sure.', 'Did it move?', 'Check it. Just in case.', 'One more look.'],
+    late:  ['What if it moved while you weren’t looking?', 'You can’t be sure.', 'Again. Just to be sure.', 'You looked. Look again.']
+  },
+  break: {                  // your fix broke one that was right
+    early: ['That one was fine.', 'You moved it.', 'Now that one is wrong.', 'It was right. Wasn’t it?'],
+    late:  ['Now it’s wrong again.', 'Fix it before it gets worse.', 'It’s spreading.']
+  },
+  near: {                   // you let go a hair off
+    early: ['It’s off. Just slightly.', 'Can you see it?', 'Almost isn’t right.', 'You’re leaving it like that?'],
+    late:  ['You can feel it from here.', 'It’s still there.', 'Off. Off. Off.', 'You won’t stop thinking about it.']
+  },
+  stuck: {                  // the same tile, again and again
+    early: ['Again.', 'Once more. Then it’ll feel right.', '{n} times. Still not right.', 'This one.'],
+    late:  ['Again. Again.', 'It has to feel right.', '{n} times and it still doesn’t feel right.', 'Until it feels right.']
+  },
+  better: {                 // better, not right
+    early: ['Closer. Not there.', 'Not yet.', 'Still not right.'],
+    late:  ['Not yet. Not yet.', 'Keep going.', 'Closer isn’t right.']
+  },
+  worse: {                  // you made it worse
+    early: ['Wrong way.', 'Further away.', 'Go back.'],
+    late:  ['Go back. Go back.', 'Now it’s worse.', 'Undo it.']
+  },
+  tug: {                    // the fix moved its partner
+    early: ['Something moved over there.', 'Did you see that?', 'That one changed.'],
+    late:  ['Everything you fix moves something else.', 'Over there. Look.', 'What else moved?']
+  },
+  almost: {                 // one left
+    early: ['One left.', 'Don’t leave it now.'],
+    late:  ['Just one. Just one.', 'Finish it.']
+  },
+  idle: {                   // you stopped
+    early: ['You’re leaving it like this?', 'It’s still not right.', 'Just one more.', 'What if you stop now?'],
+    late:  ['You can feel it. Can’t you?', 'It’s still there. It’s still there.', 'You won’t be able to stop thinking about it.']
+  },
+  long: {                   // the time you have spent
+    early: ['{time}. Still not right.', '{corr} corrections.'],
+    late:  ['{time}. Just a little longer.', 'You were going to do something else.']
+  },
+  expand: {                 // the board comes undone
+    early: ['Of course.', 'Start again.', 'It wasn’t right.'],
+    late:  ['Again. From the beginning.', 'It never felt right.']
+  }
+};
+// not every touch gets a thought — it lands harder when you can't predict it
+const SOMETIMES = new Set(['perfect', 'check', 'near', 'stuck', 'better', 'worse', 'tug']);
+const VOICE_PRIORITY = { demo: 10, expand: 9, ritual: 8, stuck: 7, break: 6, tug: 6, near: 5, worse: 4, better: 4, perfect: 5, check: 5, almost: 4, idle: 3, long: 2 };
+const VOICE_EVERY = { demo: 0, expand: 0, ritual: 0, stuck: 2500, break: 2000, tug: 3000, near: 2000, worse: 2000, better: 2000, perfect: 1500, check: 2000, almost: 6000, idle: 6000, long: 30000 };
+
+const Voice = (() => {
+  const layer = document.createElement('div');
+  layer.className = 'notes';
+  layer.setAttribute('aria-live', 'polite');
+  document.body.appendChild(layer);
+  const caret = document.createElement('span'); caret.className = 'caret';
+  let n = 0, typing = null, typingText = '';
+  // 0 → 1 over the first three minutes: everything comes faster, and stops waiting its turn
+  const pace = () => state.started ? Math.min(1, (performance.now() - state.t0) / 90000) : 0;
+  const said = [];   // every thought so far — they come back
+
+  let cur = null, timers = [], lastAt = 0, lastInput = performance.now();
+  const lastCat = {}, bags = {};
+  const clear = () => { timers.forEach(clearTimeout); timers = []; };
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+
+  function draw(cat) {
+    const P = pace(), tier = P > .35 && Math.random() < P ? 'late' : 'early';
+    const k = cat + tier;
+    if (!bags[k] || !bags[k].length) bags[k] = [...VOICE_LINES[cat][tier]].sort(() => Math.random() - .5);
+    let t = bags[k].pop();
+    // later on it starts repeating itself inside a single thought
+    if (P > .6 && Math.random() < (P - .6) * 1.2) t = `${t} ${t}`;
+    return t;
+  }
+  function fill(t) {
+    const sec = Math.floor((performance.now() - state.t0) / 1000), m = Math.floor(sec / 60);
+    return t.replace('{time}', m < 1 ? `${sec} seconds` : m === 1 ? 'a minute' : `${m} minutes`)
+            .replace('{corr}', String(state.corrections))
+            .replace('{n}', String(state.sameCount || 0));
+  }
+
+  /* a note, dropped at a random place. Closing it is allowed. It doesn't help for long. */
+  function note(lines, tile) {     // lines: [['v', text]]
+    n++;
+    const el = document.createElement('div');
+    el.className = 'note';
+    el.innerHTML = `<div class="note-h"><i>${String(n).padStart(4, '0')}</i><button class="note-x" aria-label="Close">×</button></div>`;
+    const spans = lines.map(([kind]) => {
+      const l = document.createElement('div');
+      l.className = `ln ${kind}`;
+      const sp = document.createElement('span');
+      sp.style.fontSize = `${(12 + pace() * 3).toFixed(1)}px`;   // it gets louder
+      l.appendChild(sp); el.appendChild(l);
+      return sp;
+    });
+    const longest = Math.max(...lines.map(([k, t]) => t.length)) * (1 + pace() * .25);
+    const w = Math.min(320, Math.max(150, longest * 7.3 + 26));
+    const h = 32 + lines.length * 19 * Math.ceil((longest * 7.3) / (w - 24));
+    el.style.width = `${w}px`;
+    let x = rand(12, innerWidth - w - 12), y = rand(12, innerHeight - h - 12);
+    if (tile && tile.el.isConnected) {          // pinned beside the tile it is about
+      const r = tile.el.getBoundingClientRect();
+      x = r.left + r.width * rand(.15, .75) - w / 2;
+      y = Math.random() < .5 ? r.top - h + r.height * .18 : r.bottom - r.height * .18;
+    }
+    el.style.left = `${Math.round(Math.min(innerWidth - w - 12, Math.max(12, x)))}px`;
+    el.style.top = `${Math.round(Math.min(innerHeight - h - 12, Math.max(12, y)))}px`;
+    el._lines = lines; el._tile = tile;
+    ARCH.lastNote = lines.map(l => l[1]).join(' ');
+    el.querySelector('.note-x').addEventListener('click', ev => { ev.stopPropagation(); el.remove(); rebound(el); });
+    layer.appendChild(el);
+    // measure the note with its full text, so it never runs off the screen
+    spans.forEach((sp, k) => { sp.textContent = lines[k][1]; });
+    const fw = el.offsetWidth, fh = el.offsetHeight;
+    el.style.left = `${Math.round(Math.min(innerWidth - fw - 12, Math.max(12, parseFloat(el.style.left))))}px`;
+    el.style.top = `${Math.round(Math.min(innerHeight - fh - 12, Math.max(12, parseFloat(el.style.top))))}px`;
+    spans.forEach(sp => { sp.textContent = ''; });
+    while (layer.children.length > 260) layer.firstChild.remove();
+    return spans;
+  }
+  /* pushing a thought away: usually it goes. About one time in three it comes back a few
+     seconds later, somewhere else — and now and then it comes back twice. */
+  function rebound(el) {
+    const back = el._back || 0;
+    if (state.ended || Math.random() > .33 / (1 + back)) return;
+    setTimeout(() => {
+      if (state.ended || state.locked) return;
+      const copies = Math.random() < .3 ? 2 : 1;
+      for (let c = 0; c < copies; c++) {
+        const texts = el._lines.map(l => l[1]);
+        const spans = note(el._lines, Math.random() < .5 ? el._tile : null);
+        layer.lastChild._back = back + 1;
+        fast(spans, texts);
+      }
+    }, rand(1800, 5000));
+  }
+  // how much of the screen the notes already cover (0–1, overlaps counted loosely)
+  function covered() {
+    let a = 0;
+    for (const el of layer.children) a += el.offsetWidth * el.offsetHeight;
+    return Math.min(1, a / (innerWidth * innerHeight * 1.5));
+  }
+  function type(span, text, speed, cutAt, done) {
+    const end = cutAt == null ? text.length : cutAt;
+    let i = 0;
+    const node = document.createTextNode('');
+    span.appendChild(node);
+    span.appendChild(caret);
+    typing = node; typingText = text;
+    (function step() {
+      if (!span.isConnected) { typing = null; if (done) done(); return; }   // closed mid-thought
+      if (i < end) { i++; node.textContent = text.slice(0, i); later(step, speed); return; }
+      typing = null;
+      if (done) done();
+    })();
+  }
+  function finish() {
+    if (typing) { typing.textContent = typingText; typing = null; }
+  }
+  function rest() {
+    later(() => { cur = null; lastAt = performance.now(); if (caret.parentNode && !typing) caret.remove(); }, 150);
+  }
+  function speak(cat, tile, pr) {
+    clear();
+    finish();   // a new thought arrives: the one still being typed is completed at once, never cut off
+    const x = fill(draw(cat));
+    if (tile) (tile.thoughts = tile.thoughts || []).push([x, performance.now()]);
+    cur = { pr };
+    const [sp] = note([['v', x]], tile);
+    type(sp, x, Math.max(10, 22 - pace() * 12), null, rest);
+  }
+
+  function say(cat, tile, force) {
+    if (cat !== 'demo' && !VOICE_LINES[cat]) return;
+    if (!force && SOMETIMES.has(cat) && Math.random() > .65) return;
+    if (!force && (state.locked || state.ritual || !state.started)) return;
+    const now = performance.now(), pr = VOICE_PRIORITY[cat] || 1;
+    const P = pace();
+    if (!force && now - (lastCat[cat] || -1e9) < (VOICE_EVERY[cat] || 0) * (1 - .85 * P)) return;
+    if (cur && pr <= cur.pr) {                                 // a louder thought is already speaking…
+      // …but later on, thoughts stop waiting their turn and pile up on top of each other
+      if (!force && Math.random() < .45 + P * .55) { lastCat[cat] = now; quick(cat, tile); }
+      return;
+    }
+    const gap = 500 * (1 - .8 * P);
+    if (!cur && !force && pr < 8 && now - lastAt < gap) return;
+    lastCat[cat] = now;
+    speak(cat === 'demo' ? pick(Object.keys(VOICE_LINES)) : cat, tile, pr);
+  }
+  function hush() {   // stops mid-thought; what was written stays, broken off
+    clear(); cur = null;
+    finish();
+    caret.remove();
+  }
+  function poke() { lastInput = performance.now(); }
+
+  // silence is also a trigger
+  setInterval(() => {
+    if (!state.started || state.locked || state.ritual) return;
+    const now = performance.now();
+    if (now - lastInput > 4000) say('idle');
+    else if (now - state.t0 > 45000) say('long');
+  }, 1000);
+
+  /* rumination: go back to a tile, and what you thought about it comes back too — word for word. */
+  let lastEcho = 0;
+  function revisit(tile) {
+    const now = performance.now(), P = pace();
+    const old = (tile.thoughts || []).filter(t => now - t[1] > 10000 * (1 - .8 * P));   // something you thought on an earlier visit
+    if (!old.length || state.locked || now - lastEcho < 1500 * (1 - .85 * P)) return;
+    lastEcho = now;
+    const [x] = pick(old);
+    fast(note([['v', x]], tile), [x]);
+  }
+  // a thought that doesn't wait for the one before it to finish
+  function quick(cat, tile) {
+    const x = fill(draw(cat));
+    if (tile) (tile.thoughts = tile.thoughts || []).push([x, performance.now()]);
+    fast(note([['v', x]], tile), [x]);
+  }
+  function fast(spans, texts) {
+    spans.map((sp, k) => [sp, texts[k]]).reduce((delay, [span, text]) => {
+      let i = 0;
+      setTimeout(function step() {
+        if (state.ended || !span.isConnected) return;
+        span.textContent = text.slice(0, ++i);
+        if (i < text.length) setTimeout(step, 14);
+      }, delay);
+      return delay + text.length * 14 + 120;
+    }, 0);
+  }
+
+  return { say, hush, poke, revisit };
+})();
+
+/* ======================================================
+   Sound — a room tone that tightens with every flaw,
+   a small clean click when something is right,
+   and real silence in the moment of harmony.
+   Everything is synthesized; nothing is loaded.
+   ====================================================== */
+const Sound = (() => {
+  let ctx = null, master, hum, air, whine, muted = false, lastCrack = 0;
+  function start() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 1; master.connect(ctx.destination);
+
+    // room tone: low sines a fraction apart, so they slowly beat against each other
+    hum = ctx.createGain(); hum.gain.value = 0; hum.connect(master);
+    [[55, 1], [55.6, .8], [110.3, .22]].forEach(([f, v]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; g.gain.value = v; o.connect(g); g.connect(hum); o.start();
+    });
+    // air: soft filtered noise
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const n = ctx.createBufferSource(); n.buffer = buf; n.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 650;
+    air = ctx.createGain(); air.gain.value = 0;
+    n.connect(lp); lp.connect(air); air.connect(master); n.start();
+    // the whine: thin, high, never quite in tune with itself
+    whine = ctx.createGain(); whine.gain.value = 0; whine.connect(master);
+    [3150, 3163].forEach(f => { const o = ctx.createOscillator(); o.frequency.value = f; o.connect(whine); o.start(); });
+  }
+  const live = () => ctx && ctx.state === 'running';
+  function level(x) {            // x: 0 = everything right, 1 = nothing right
+    if (!ctx || document.body.classList.contains('harmony') || state.ended) return;
+    const t = ctx.currentTime;
+    hum.gain.setTargetAtTime(.03 + x * .06, t, .7);
+    air.gain.setTargetAtTime(.006 + x * .02, t, .7);
+    whine.gain.setTargetAtTime(x * x * .005, t, .9);
+  }
+  function silence(tc) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [hum, air, whine].forEach(g => { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0, t, tc || .12); });
+  }
+  function blip(freq, dur, vol, type, at = 0) {
+    if (!live()) return;
+    const t = ctx.currentTime + at, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + .004);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + .03);
+  }
+  return {
+    start, level, silence,
+    right: () => { blip(1760, .09, .045); blip(3520, .05, .01); },
+    tick:  () => blip(1250, .025, .018, 'triangle'),
+    crack: () => { const n = performance.now(); if (n - lastCrack < 350) return; lastCrack = n; blip(233, .07, .02, 'triangle'); },
+    wrong: () => { blip(140, .18, .05, 'triangle'); blip(149, .18, .04, 'triangle'); },
+    arrive:() => { blip(880, .14, .03); blip(932, .14, .026); },
+    toggle() {
+      muted = !muted;
+      if (master) master.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, .05);
+      return muted;
+    }
+  };
+})();
+// browsers only allow sound after the first gesture
+['pointerdown', 'keydown'].forEach(t => window.addEventListener(t, () => Sound.start(), { capture: true }));
+
+/* ---------- Demo controls ---------- */
+const DEMO_KEYS = ['trace', 'clean', 'dwell', 'putback', 'lineup', 'hold', 'straighten', 'tap', 'rhythm'];
+function skip() {
+  if (state.ritual) { endRitual(); return; }
+  if (state.locked) return;
+  begin();
+  state.tiles.forEach(t => { t.s = t.t; });  // every tile to its exact target
+  afterInput();                               // → perfect → harmony → zoom out
+}
+
+
+document.addEventListener('keydown', ev => {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const r = state.ritual;
+  if (ev.key === 'd' || ev.key === 'D') { document.body.classList.toggle('nodemo'); return; }
+  if (ev.key === 'm' || ev.key === 'M') { Sound.toggle(); return; }
+  if (ev.key === 'f' || ev.key === 'F') {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    return;
+  }
+  if (ev.key === 'a' || ev.key === 'A') { if (!$('archive').classList.contains('on')) Archive.show(); else Archive.hide(); return; }
+  if (state.ended) return;
+  if (ev.key === 'e' || ev.key === 'E') { if (!state.started) begin(); ending(); return; }
+  if (ev.key === 'n' || ev.key === 'N') { ev.preventDefault(); skip(); return; }
+  if (!r && !state.locked) {
+    if (ev.key === '+' || ev.key === '=') { zoomCenter(1.5); return; }
+    if (ev.key === '-' || ev.key === '_') { zoomCenter(1 / 1.5); return; }
+    if (ev.key === '0') { resetView(true); return; }
+  }
+  if (false) {
+    begin(); startRitual(false, DEMO_KEYS[+ev.key - 1]); return;
+  }
+  if ((ev.key === 'v' || ev.key === 'V') && !r && !state.locked) { begin(); Voice.say('demo', null, true); return; }
+  if (false) {
+    if (!state.locked) { begin(); startRitual(); }
+    return;
+  }
+  if (!r) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  if (r.done) return;
+  if (r.type === 'still') resetStill();
+  else if (r.type === 'rhythm' && (ev.key === ' ' || ev.key === 'Enter')) { if (!ev.repeat) rhythmPress(); }
+}, true);
+
+init();
+})();
+</script>
+</body>
+</html>
