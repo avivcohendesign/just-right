@@ -330,6 +330,20 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 .ask-name input{font:inherit;font-size:18px;width:100%;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--mute);padding:6px 0;color:var(--ink);outline:none}
 .ask-name input:focus{border-bottom-color:var(--blue)}
 .ask-name input::placeholder{color:var(--mute);opacity:.6}
+/* the archive's second view: hands — each line a person, running into a shape they kept going back to */
+.arch-view{position:fixed;left:50%;top:28px;transform:translateX(-50%);z-index:33;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.arch-view.on{opacity:1;pointer-events:auto}
+.arch-view button{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:9px 14px;color:var(--mute);cursor:pointer}
+.arch-view button.sel{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:var(--tile)}
+body.focus-panel .arch-view{opacity:0;pointer-events:none}
+.hands{position:fixed;inset:0;z-index:30;background:var(--bg);opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.hands.on{opacity:1;pointer-events:auto}
+.hands canvas{position:absolute;inset:0;display:block}
+.hands-tip{position:fixed;z-index:34;pointer-events:none;background:var(--tile);padding:8px 11px;font-size:11px;line-height:1.45;letter-spacing:.02em;color:var(--ink);max-width:260px;opacity:0;transition:opacity 150ms}
+.hands-tip.on{opacity:1}
+.hands-tip i{font-style:normal;color:var(--mute)}
+.hands-key{position:fixed;left:40px;top:30px;z-index:31;font-size:10px;letter-spacing:.06em;color:var(--mute);line-height:1.6;max-width:300px;pointer-events:none}
+.hands-key b{font-weight:400;color:var(--red)}
 /* the archive, sorted by what people said */
 .arch-ocd{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:31;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
 .arch-ocd.on{opacity:1;pointer-events:auto}
@@ -410,6 +424,9 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 </div>
 
 <div class="archive" id="archive" aria-label="Archive"><canvas id="archCanvas"></canvas></div>
+<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">Each line is a person and a shape they kept going back to. The further it reaches, the later they were still at it. <b>Red</b>: the share of those touches that came when it was already straight.</div></div>
+<div class="hands-tip" id="handsTip"></div>
+<div class="arch-view" id="archView"><button data-v="boards" class="sel">Boards</button><button data-v="hands">Hands</button></div>
 <div class="arch-stat" id="archStat"></div>
 <div class="arch-ocd" id="archOcd"><button data-f="all" class="sel">Everyone</button><button data-f="yes">OCD</button><button data-f="maybe">Don’t know</button><button data-f="no">No OCD</button></div>
 <div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
@@ -1634,14 +1651,14 @@ const Archive = (() => {
   function enter(i) {
     if (i < 0 || i >= list.length) return;
     cur = i; hover = -1;
-    $('archive').classList.add('focus');
+    $('archive').classList.add('focus'); document.body.classList.add('focus-panel');
     play = null;
     glide(focusOn(i, 0, true), 900, () => { if (cur === i) startPlay(i); });
     panel(list[i], i);
   }
   function back() {
     if (cur < 0) return;
-    cur = -1; play = null; $('archPanel').classList.remove('on'); $('archive').classList.remove('focus');
+    cur = -1; play = null; $('archPanel').classList.remove('on'); $('archive').classList.remove('focus'); document.body.classList.remove('focus-panel');
     glide(fitAll(), 1100);
   }
   /* ---- watching them try: the session played back, fast ---- */
@@ -1742,6 +1759,7 @@ const Archive = (() => {
   }
   function wire() {
     if (wired) return; wired = true;
+    wireHands();
     const A = $('archive');
     let drag = null;
     A.addEventListener('pointerdown', ev => { ev.stopPropagation(); if (mine && mine.landed) controls(); cancelAnimationFrame(anim); drag = { x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, moved: false }; A.setPointerCapture(ev.pointerId); });
@@ -1771,11 +1789,11 @@ const Archive = (() => {
       const name = { yes: 'Have OCD', maybe: 'Don’t know', no: 'No OCD' }[filt];
       $('archStat').innerHTML = filt === 'all' ? '' : `${name} (${grp.length}): ${line(grp)} &nbsp;—&nbsp; everyone else (${rest.length}): ${line(rest)}${grp.every(r => r.demo) ? ' &nbsp;· demo data' : ''}`;
       $('archStat').classList.toggle('on', filt !== 'all');
-      redraw();
+      redraw(); if (view === 'hands') { hT0 = performance.now(); hRedraw(); }
     }));
     addEventListener('keydown', ev => {
       if (!A.classList.contains('on')) return;
-      if (ev.key === 'Escape') back();
+      if (ev.key === 'Escape') { if (view === 'hands') setMode('boards'); else back(); }
       if (cur >= 0 && ev.key === 'ArrowRight') enter((cur + 1) % list.length);
       if (cur >= 0 && ev.key === 'ArrowLeft') enter((cur - 1 + list.length) % list.length);
     });
@@ -1835,10 +1853,143 @@ const Archive = (() => {
     if (MODE === 'live') remote = await Remote.list();
     layout();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
-    ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); });
+    ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); });
   }
-  function controls() { $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); }
-  function hide() { $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
+
+  /* ======================================================
+     Hands: the same people, seen another way. Each line is one person and one of the shapes they
+     went back to most; lines from everyone gather into the sixty, in board order, on the right.
+     How far a line reaches is how late in their session they were still touching that shape.
+     ====================================================== */
+  let view = 'boards', H = null, hcv = null, hctx = null, hHover = null, hAnim = 0, hT0 = 0, hLoading = false;
+  const colorOf = i => { const c = (state.tiles[i].colors || [])[0] || ''; const m = /var\((--[a-z]+)\)/.exec(c); return m ? getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim() : (c || '#999'); };
+  function session(r, k) { return r.ev ? { start: r.start || START(), ev: r.ev, th: r.th || [] } : r.demo ? simulate(r, k) : null; }
+  function handLines() {
+    const lines = [], per1 = Math.max(1, Math.min(3, Math.round(260 / Math.max(1, list.length))));   // a few hundred lines, however many people
+    list.forEach((r, k) => {
+      const s = session(r, k); if (!s || !s.th.length) return;
+      const n = new Array(N).fill(0), chk = new Array(N).fill(0), last = new Array(N).fill(0);
+      const lv = s.start.slice(); let e = 0;
+      s.th.forEach(([t, i]) => {
+        while (e < s.ev.length && s.ev[e][0] < t) { lv[s.ev[e][1]] = s.ev[e][2]; e++; }
+        n[i]++; if (lv[i] === STRAIGHT) chk[i]++; last[i] = Math.max(last[i], t);
+      });
+      const top = n.map((c, i) => [c, i]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, per1);
+      top.forEach(([c, i], rank) => lines.push({ k, r, i, n: c, chk: chk[i], red: chk[i] > c / 2, t: last[i], rank }));
+    });
+    const ts = lines.map(l => Math.log(2 + l.t)), lo = Math.min(...ts), hi = Math.max(...ts);
+    lines.forEach((l, j) => { l.len = .12 + .88 * (ts[j] - lo) / (hi - lo || 1); });
+    lines.sort((a, b) => a.i - b.i || b.len - a.len);
+    const per = new Array(N).fill(0); lines.forEach(l => { per[l.i]++; });
+    return { lines, per, colors: Array.from({ length: N }, (_, i) => colorOf(i)) };
+  }
+  function hGeom() {
+    const W = innerWidth, Hh = innerHeight, top = 128, bot = Hh - 126;
+    const row = (bot - top) / N, icon = Math.max(6, Math.min(22, row * .86));
+    const xIcon = W - 40 - 34 - icon, xEnd = xIcon - 12, xBend = Math.max(200, W * .46), x0 = 40;
+    return { W, Hh, top, bot, row, icon, xIcon, xEnd, xBend, x0 };
+  }
+  function visible(l) { return filt === 'all' || l.r.ocd === filt; }
+  function drawHands(now) {
+    hAnim = 0;
+    if (!H || view !== 'hands') return;
+    const g = hGeom(), c = hctx;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = BG; c.fillRect(0, 0, g.W, g.Hh);
+    const p = Math.min(1, (now - hT0) / 1400), ease = 1 - Math.pow(1 - p, 3);
+    const shown = H.lines.filter(visible), L = shown.length;
+    const lineH = (g.bot - g.top) / Math.max(1, L);
+    const lw = Math.max(.5, Math.min(2.6, lineH * .55));
+    const focusI = hHover ? hHover.i : -1;
+    shown.forEach((l, j) => {
+      const yL = g.top + (j + .5) * lineH, yR = g.top + (l.i + .5) * g.row;
+      const xs = g.xBend - l.len * (g.xBend - g.x0) * ease;
+      const dim = focusI >= 0 && l.i !== focusI && !(hHover.line && hHover.line.k === l.k);
+      c.globalAlpha = dim ? .08 : (hHover && hHover.line === l ? 1 : .85);
+      c.strokeStyle = H.colors[l.i];
+      c.lineWidth = hHover && hHover.line === l ? Math.max(2, lw * 2) : lw;
+      c.beginPath(); c.moveTo(xs, yL); c.lineTo(g.xBend, yL); c.lineTo(g.xEnd, yR); c.stroke();
+      if (l.chk) {           // the part of the line that was fixing what was already straight, in red, at the far end
+        const xr = xs + (g.xBend - xs) * (l.chk / l.n);
+        c.strokeStyle = '#E2341D'; c.beginPath(); c.moveTo(xs, yL); c.lineTo(xr, yL); c.stroke();
+      }
+      l._y = yL; l._x = xs;
+    });
+    c.globalAlpha = 1;
+    // the sixty, straight, in board order
+    for (let i = 0; i < N; i++) {
+      const y = g.top + (i + .5) * g.row, n = shown.filter(l => l.i === i).length;
+      c.globalAlpha = focusI >= 0 && focusI !== i ? .3 : 1;
+      c.fillStyle = '#fff'; c.fillRect(g.xIcon - 1, y - g.icon / 2 - 1, g.icon + 2, g.icon + 2);
+      const im = sprites && sprites[i] && sprites[i][STRAIGHT]; if (im) c.drawImage(im, g.xIcon, y - g.icon / 2, g.icon, g.icon);
+      if (n && g.row >= 8) { c.fillStyle = '#8C8981'; c.font = `${Math.min(10, g.row * .7)}px ${getComputedStyle(document.body).fontFamily}`; c.textBaseline = 'middle'; c.fillText(String(n), g.xIcon + g.icon + 8, y); }
+    }
+    c.globalAlpha = 1;
+    if (p < 1) hAnim = requestAnimationFrame(drawHands);
+  }
+  const hRedraw = () => { if (!hAnim) hAnim = requestAnimationFrame(drawHands); };
+  function hSize() {
+    hcv.width = innerWidth * dpr; hcv.height = innerHeight * dpr;
+    hcv.style.width = innerWidth + 'px'; hcv.style.height = innerHeight + 'px';
+  }
+  async function fetchDetails() {           // real visitors' sessions are fetched only when someone asks to see them
+    const need = list.filter(r => r.remote && !r.ev).slice(0, 240);
+    if (!need.length || hLoading) return;
+    hLoading = true;
+    for (let k = 0; k < need.length; k += 6) {
+      await Promise.all(need.slice(k, k + 6).map(async r => { const d = await Remote.detail(r.id); if (d) Object.assign(r, d); else r.ev = r.ev || []; }));
+    }
+    hLoading = false;
+    H = handLines(); H.n = list.length; hRedraw();
+  }
+  function hHit(x, y) {
+    if (!H) return null;
+    const g = hGeom();
+    if (x >= g.xIcon - 6) { const i = Math.floor((y - g.top) / g.row); return i >= 0 && i < N ? { i } : null; }
+    if (x > g.xBend) return null;
+    const shown = H.lines.filter(visible); let best = null, bd = 6;
+    shown.forEach(l => { if (x >= l._x - 4) { const d = Math.abs(l._y - y); if (d < bd) { bd = d; best = l; } } });
+    return best ? { i: best.i, line: best } : null;
+  }
+  function hTip(hh, x, y) {
+    const tip = $('handsTip');
+    if (!hh) { tip.classList.remove('on'); return; }
+    let html;
+    if (hh.line) {
+      const l = hh.line, r = l.r, who = r === mine ? 'You' : r.name ? esc(r.name) : `Visitor ${String(l.k + 1).padStart(3, '0')}`;
+      html = `${who}${r.demo ? ' <i>· demo</i>' : ''}<br>touched it ${l.n}×${l.chk ? `, ${l.chk} of them when it was already straight` : ''}<br><i>still at it at ${mmss(l.t)}</i>`;
+    } else {
+      const ls = H.lines.filter(l => visible(l) && l.i === hh.i), c = ls.reduce((a, l) => a + l.chk, 0), t = ls.reduce((a, l) => a + l.n, 0);
+      html = ls.length ? `${ls.length} ${ls.length === 1 ? 'person' : 'people'} kept going back to this one<br><i>${Math.round(c / Math.max(1, t) * 100)}% of those touches came when it was already straight</i>` : '<i>nobody went back to this one</i>';
+    }
+    tip.innerHTML = html; tip.classList.add('on');
+    const w = tip.offsetWidth, hgt = tip.offsetHeight;
+    tip.style.left = Math.min(innerWidth - w - 12, x + 14) + 'px'; tip.style.top = Math.min(innerHeight - hgt - 12, y + 14) + 'px';
+  }
+  function setMode(v) {
+    if (v === view) return;
+    view = v;
+    $('archView').querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
+    if (v === 'hands') {
+      if (cur >= 0) back();
+      hcv = $('handsCanvas'); hctx = hcv.getContext('2d'); hSize();
+      if (!H || H.n !== list.length) { H = handLines(); H.n = list.length; } hT0 = performance.now(); hHover = null;
+      $('hands').classList.add('on'); $('archZoom').classList.remove('on');
+      hRedraw(); fetchDetails();
+    } else {
+      $('hands').classList.remove('on'); $('handsTip').classList.remove('on'); $('archZoom').classList.add('on');
+    }
+  }
+  function wireHands() {
+    const el = $('hands');
+    $('archView').querySelectorAll('button').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); setMode(b.dataset.v); }));
+    el.addEventListener('pointermove', ev => { const hh = hHit(ev.clientX, ev.clientY); const same = (hh && hHover && hh.i === hHover.i && hh.line === hHover.line) || (!hh && !hHover); hHover = hh; if (!same) hRedraw(); hTip(hh, ev.clientX, ev.clientY); el.style.cursor = hh && hh.line ? 'pointer' : 'default'; });
+    el.addEventListener('pointerleave', () => { hHover = null; hTip(null); hRedraw(); });
+    el.addEventListener('click', () => { if (hHover && hHover.line) { const k = hHover.line.k; setMode('boards'); setTimeout(() => enter(k), 60); } });
+    addEventListener('resize', () => { if (view === 'hands') { hSize(); hRedraw(); } });
+  }
+  function controls() { if (view !== 'hands') $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); }
+  function hide() { setMode('boards'); $('archView').classList.remove('on'); $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
   return { save, show, hide, arrive, demos, levels };
 })();
 
