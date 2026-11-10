@@ -375,7 +375,7 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 <div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
 <aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
 
-<div class="endbar" id="endbar"><button id="btnDone">I’m done</button><button id="btnGiveUp">I give up</button></div>
+<div class="endbar on" id="endbar"><button id="btnDone">I’m done</button><button id="btnGiveUp">I give up</button></div>
 <div class="zoomer" aria-label="Zoom">
   <button id="zin" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 2v10M2 7h10"/></svg></button>
   <div class="zread" id="zread">1.0×</div>
@@ -1079,7 +1079,6 @@ function init() {
     setTimeout(() => { intro.remove(); }, 1900);
     state.locked = false;
     lastAny = performance.now();
-    setTimeout(() => $('endbar').classList.add('on'), 2500);
     // no instructions: if nothing happens, one control quietly moves
     setTimeout(() => { if (!state.started && state.tiles[0]) state.tiles[0].el.classList.add('beckon'); }, 7000);
   };
