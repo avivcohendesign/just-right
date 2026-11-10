@@ -259,6 +259,12 @@ body.harmony .chrome,body.harmony .mark{opacity:0}
 body.harmony .tile::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,0)}
 body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 
+/* ---------- two ways out, in the bottom margin ---------- */
+.endbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc((var(--M, 40px) - 30px) / 2);z-index:6;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity 1400ms ease}
+.endbar.on{opacity:1;pointer-events:auto}
+.endbar button{font:inherit;font-size:10px;letter-spacing:.14em;text-transform:uppercase;height:30px;padding:0 14px;background:transparent;border:0;box-shadow:inset 0 0 0 1px rgba(20,20,20,.18);color:var(--mute);cursor:pointer;transition:color 250ms,box-shadow 250ms}
+.endbar button:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.ap-end{font-size:12px;color:var(--mute);margin-top:6px}
 /* ---------- the question, before anything ---------- */
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
@@ -358,6 +364,7 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 <div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
 <aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
 
+<div class="endbar" id="endbar"><button id="btnDone">I’m done</button><button id="btnGiveUp">I give up</button></div>
 <div class="zoomer" aria-label="Zoom">
   <button id="zin" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 2v10M2 7h10"/></svg></button>
   <div class="zread" id="zread">1.0×</div>
@@ -467,7 +474,7 @@ const sign = () => (Math.random() < .5 ? -1 : 1);
    ====================================================== */
 const MODE = 'live';
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwyaoaEVjITJ_szti6NZq0q2RwZL--TMGOLMyJBj8ZsrwR7zYiVBz6DR48MeNqJJSGzCg/exec';
-const ARCH = { name: '', lastNote: '', timeline: [], preview: false, start: null, prev: null, events: [], touches: [] };   // what the archive keeps of you
+const ARCH = { end: '', name: '', lastNote: '', timeline: [], preview: false, start: null, prev: null, events: [], touches: [] };   // what the archive keeps of you
 const state = { ocd: null, level: 0, tiles: [], locked: false, started: false, t0: 0, corrections: 0, fig: 1, drag: null, ritual: null, rituals: 0 };
 
 function svgEl(tag, attrs, parent) {
@@ -976,6 +983,7 @@ function sizeFrame() {
   frame.style.height = `${ch * r}px`;
   frame.style.left = `${M - gx / 2}px`;
   frame.style.top = `${M - gy / 2}px`;
+  document.documentElement.style.setProperty('--M', `${M}px`);
   frame.style.setProperty('--ix', `${(gx / 2).toFixed(2)}px`);
   frame.style.setProperty('--iy', `${(gy / 2).toFixed(2)}px`);
   const cell = S / (1 - .092);
@@ -1064,9 +1072,14 @@ function init() {
     setTimeout(() => { intro.remove(); }, 1900);
     state.locked = false;
     lastAny = performance.now();
+    setTimeout(() => $('endbar').classList.add('on'), 2500);
     // no instructions: if nothing happens, one control quietly moves
     setTimeout(() => { if (!state.started && state.tiles[0]) state.tiles[0].el.classList.add('beckon'); }, 7000);
   };
+  // two ways to leave: you decide you're done, or you give up. (Doing nothing for a minute is the third.)
+  const leave = how => () => { if (state.ended || state.locked && !state.started) return; ARCH.end = how; if (!state.started) begin(); ending(); };
+  $('btnDone').addEventListener('click', leave('done'));
+  $('btnGiveUp').addEventListener('click', leave('gave_up'));
   // first the question; the opening line only after it is answered
   const ask = $('ask');
   ask.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
@@ -1101,6 +1114,8 @@ function ending() {
   if (state.ended) return;
   state.ended = true;
   state.locked = true;
+  if (!ARCH.end) ARCH.end = 'idle';
+  $('endbar').classList.remove('on');
   clearTimeout(ritualTimer);
   if (state.ritual) {
     const r = state.ritual;
@@ -1151,7 +1166,7 @@ const Remote = (() => {
   function send(rec) {
     const row = { at: rec.at, name: rec.name, ocd: rec.ocd, dur: rec.dur, corr: rec.corr, left: rec.left, chk: rec.chk,
       lv: JSON.stringify(rec.lv), fixes: JSON.stringify(rec.fixes), tl: JSON.stringify(rec.tl.map(v => +v.toFixed(2))),
-      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th }) };
+      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end }) };
     // text/plain keeps the browser from asking permission first; the script reads it as JSON
     fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) }).catch(() => {});
   }
@@ -1167,6 +1182,7 @@ const Archive = (() => {
   const qz = f => { let b = 0; LEVEL.forEach((l, k) => { if (Math.abs(l - f) < Math.abs(LEVEL[b] - f)) b = k; }); return f && b === STRAIGHT ? (f > 0 ? 5 : 3) : b; };
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
   const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
+  const endText = r => (r === mine ? { done: 'You said you were done.', gave_up: 'You gave up.', idle: 'You stopped touching it.' } : { done: 'Said they were done.', gave_up: 'Gave up.', idle: 'Stopped touching it.' })[r.end] || '';
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const median = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : 0; };
   const fmtDur = s => s < 60 ? `${s} sec` : `${Math.round(s / 60)} min`;
@@ -1221,7 +1237,8 @@ const Archive = (() => {
       for (let k = 0; k < steps; k++) { v += rr(0, .06) * (ceil - v); if (R() < .07) v -= rr(.05, .25); v = Math.max(0, Math.min(ceil, v)); tl.push(+v.toFixed(2)); }
       tl[tl.length - 1] = +endV.toFixed(2);
       const u = R(), ocd = u < .18 ? 'yes' : u < .4 ? 'maybe' : u < .85 ? 'no' : 'skip';   // demo answers are random: they say nothing about anyone
-      d.push({ demo: true, ocd, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
+      const ue = R(), end = ue < .45 ? 'done' : ue < .85 ? 'gave_up' : 'idle';
+      d.push({ demo: true, ocd, end, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
     }
     return d;
   }
@@ -1231,7 +1248,7 @@ const Archive = (() => {
     mine = {
       at: Date.now(), dur: Math.max(1, Math.floor((performance.now() - state.t0) / 1000)), corr: state.corrections,
       lv: state.tiles.map((t, i) => qz(flaw(e[i], tol))), fixes: state.tiles.map(t => t.fixes), tl: ARCH.timeline.slice(), last: ARCH.lastNote,
-      ocd: state.ocd || 'skip', name: ARCH.name || '',
+      ocd: state.ocd || 'skip', name: ARCH.name || '', end: ARCH.end || 'idle',
       start: ARCH.start, ev: ARCH.events.slice(0, 2000), th: ARCH.touches.slice(0, 1000)
     };
     mine.left = mine.lv.filter(x => x !== STRAIGHT).length;
@@ -1433,7 +1450,7 @@ const Archive = (() => {
     return (rec._chk = { n: Math.min(n, of), of });
   }
   async function startPlay(i) {
-    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) Object.assign(list[i], d); }
+    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.textContent = endText(list[i]); } }
     if (cur !== i) return;
     const rec = list[i], s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : { start: rec.lv.slice(), ev: [], th: [] };
     play = { i, lv: s.start.slice(), ev: s.ev, th: s.th, k: 0, h: 0, t0: performance.now(), total: Math.min(15000, Math.max(6000, rec.dur * 25)), dur: rec.dur, flash: [], done: false };
@@ -1457,6 +1474,7 @@ const Archive = (() => {
     P.innerHTML = `<div class="ap-top"><span class="arch-k">${i + 1} / ${list.length}</span><button class="ap-x" id="apX">Back · Esc</button></div>
       <div class="ap-who${you ? ' you' : ''}">${you ? 'You' : rec.name ? esc(rec.name) : `Visitor ${String(i + 1).padStart(3, '0')}`}</div>
       <div class="ap-when">${you ? 'just now' : fmtAt(rec.at)}${rec.demo ? ' · demo' : ''}${rec.name ? '' : ` · ${said}`}</div>
+      <div class="ap-end" id="apEnd">${endText(rec)}</div>
       <div class="ap-line-s">${fmtDur(rec.dur)} · ${rec.corr.toLocaleString('en')} corrections · <span style="color:var(--red)">${rec.left} left crooked</span></div>
       <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
         <div class="ap-axis"><span>how much of it was right</span><button class="ap-again" id="apAgain">Watch again</button></div></div>
