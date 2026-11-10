@@ -343,7 +343,7 @@ body.peek.focus-panel .arch-home{display:none}
 .arch-view button{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:9px 14px;color:var(--mute);cursor:pointer}
 .arch-view button.sel{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:var(--tile)}
 body.focus-panel .arch-view{opacity:0;pointer-events:none}
-.hands{position:fixed;inset:0;z-index:30;background:var(--bg);opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.hands{position:fixed;inset:0;z-index:30;background:#fff;opacity:0;pointer-events:none;transition:opacity 700ms ease}
 .hands.on{opacity:1;pointer-events:auto}
 .hands canvas{position:absolute;inset:0;display:block}
 .hands-tip{position:fixed;z-index:34;pointer-events:none;background:var(--tile);padding:8px 11px;font-size:11px;line-height:1.45;letter-spacing:.02em;color:var(--ink);max-width:260px;opacity:0;transition:opacity 150ms}
@@ -432,7 +432,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 </div>
 
 <div class="archive" id="archive" aria-label="Archive"><canvas id="archCanvas"></canvas></div>
-<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">Each line is a person and a shape they kept going back to. The further it reaches, the later they were still at it. <b>Red</b>: the share of those touches that came when it was already straight.</div></div>
+<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">One line for each person, running to the shape they kept going back to. The longer the line, the more times.</div></div>
 <div class="hands-tip" id="handsTip"></div>
 <button class="arch-home" id="archHome">← Back to the game</button>
 <div class="arch-view" id="archView"><button data-v="boards" class="sel">Boards</button><button data-v="hands">Hands</button></div>
@@ -1871,35 +1871,39 @@ const Archive = (() => {
   /* ======================================================
      Hands: the same people, seen another way. Each line is one person and one of the shapes they
      went back to most; lines from everyone gather into the sixty, in board order, on the right.
-     How far a line reaches is how late in their session they were still touching that shape.
+     The longer the line, the more times they went back to it.
      ====================================================== */
   let view = 'boards', H = null, hcv = null, hctx = null, hHover = null, hAnim = 0, hT0 = 0, hLoading = false;
   const colorOf = i => { const c = (state.tiles[i].colors || [])[0] || ''; const m = /var\((--[a-z]+)\)/.exec(c); return m ? getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim() : (c || '#999'); };
   function session(r, k) { return r.ev ? { start: r.start || START(), ev: r.ev, th: r.th || [] } : r.demo ? simulate(r, k) : null; }
+  const SHAPE_NAME = { stripes: 'Stripes', ring: 'Open ring', square: 'Square', triangle: 'Triangle', cross: 'Cross', dots: 'Four dots', diamond: 'Diamond', chevrons: 'Chevrons',
+    halfsplit: 'Split circle', bars: 'Bars', concentric: 'Rings', radial: 'Burst', checker: 'Checker', nested: 'Nested squares', row: 'Three in a row', hexagon: 'Hexagon' };
   function handLines() {
-    const lines = [], per1 = Math.max(1, Math.min(3, Math.round(260 / Math.max(1, list.length))));   // a few hundred lines, however many people
+    // one line for each person, to the shape they went back to most (two each when there are only a few people)
+    const lines = [], per1 = list.length < 120 ? 2 : 1;
     list.forEach((r, k) => {
       const s = session(r, k); if (!s || !s.th.length) return;
-      const n = new Array(N).fill(0), chk = new Array(N).fill(0), last = new Array(N).fill(0);
-      const lv = s.start.slice(); let e = 0;
-      s.th.forEach(([t, i]) => {
-        while (e < s.ev.length && s.ev[e][0] < t) { lv[s.ev[e][1]] = s.ev[e][2]; e++; }
-        n[i]++; if (lv[i] === STRAIGHT) chk[i]++; last[i] = Math.max(last[i], t);
-      });
-      const top = n.map((c, i) => [c, i]).filter(x => x[0] > 0).sort((a, b) => b[0] - a[0]).slice(0, per1);
-      top.forEach(([c, i], rank) => lines.push({ k, r, i, n: c, chk: chk[i], red: chk[i] > c / 2, t: last[i], rank }));
+      const n = new Array(N).fill(0);
+      s.th.forEach(([t, i]) => { n[i]++; });
+      n.map((c, i) => [c, i]).filter(x => x[0] > 1).sort((a, b) => b[0] - a[0]).slice(0, per1)
+        .forEach(([c, i]) => lines.push({ k, r, i, n: c }));
     });
-    const ts = lines.map(l => Math.log(2 + l.t)), lo = Math.min(...ts), hi = Math.max(...ts);
-    lines.forEach((l, j) => { l.len = .12 + .88 * (ts[j] - lo) / (hi - lo || 1); });
-    lines.sort((a, b) => a.i - b.i || b.len - a.len);
-    const per = new Array(N).fill(0); lines.forEach(l => { per[l.i]++; });
-    return { lines, per, colors: Array.from({ length: N }, (_, i) => colorOf(i)) };
+    let keep = lines;
+    if (lines.length > 240) {           // enough lines to read one by one, like threads
+      const step = lines.length / 240; keep = [];
+      for (let j = 0; j < 240; j++) keep.push(lines[Math.floor(j * step)]);
+      lines.forEach(l => { if (l.r === mine && !keep.includes(l)) keep.push(l); });
+    }
+    const ts = keep.map(l => Math.log(l.n)), lo = Math.min(...ts), hi = Math.max(...ts);
+    keep.forEach((l, j) => { l.len = .1 + .9 * (ts[j] - lo) / (hi - lo || 1); });
+    keep.sort((a, b) => a.i - b.i || b.len - a.len);
+    return { lines: keep, colors: Array.from({ length: N }, (_, i) => colorOf(i)), names: state.tiles.map(t => SHAPE_NAME[t.shape] || t.shape) };
   }
   function hGeom() {
-    const W = innerWidth, Hh = innerHeight, top = 128, bot = Hh - 126;
-    const row = (bot - top) / N, icon = Math.max(6, Math.min(22, row * .86));
-    const xIcon = W - 40 - 34 - icon, xEnd = xIcon - 12, xBend = Math.max(200, W * .46), x0 = 40;
-    return { W, Hh, top, bot, row, icon, xIcon, xEnd, xBend, x0 };
+    const W = innerWidth, Hh = innerHeight, top = 96, bot = Hh - 104;
+    const row = (bot - top) / N;
+    const xLabel = W - 40 - Math.min(150, W * .14), xSw = xLabel - 22, xEnd = xSw, xBend = Math.max(180, W * .4), x0 = 40;
+    return { W, Hh, top, bot, row, xLabel, xSw, xEnd, xBend, x0 };
   }
   function visible(l) { return filt === 'all' || l.r.ocd === filt; }
   function drawHands(now) {
@@ -1907,34 +1911,31 @@ const Archive = (() => {
     if (!H || view !== 'hands') return;
     const g = hGeom(), c = hctx;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.fillStyle = BG; c.fillRect(0, 0, g.W, g.Hh);
+    c.fillStyle = '#fff'; c.fillRect(0, 0, g.W, g.Hh);
     const p = Math.min(1, (now - hT0) / 1400), ease = 1 - Math.pow(1 - p, 3);
     const shown = H.lines.filter(visible), L = shown.length;
     const lineH = (g.bot - g.top) / Math.max(1, L);
-    const lw = Math.max(.5, Math.min(2.6, lineH * .55));
+    const lw = Math.max(.8, Math.min(4, lineH * .62));
     const focusI = hHover ? hHover.i : -1;
+    c.lineCap = 'butt'; c.lineJoin = 'miter';
     shown.forEach((l, j) => {
       const yL = g.top + (j + .5) * lineH, yR = g.top + (l.i + .5) * g.row;
       const xs = g.xBend - l.len * (g.xBend - g.x0) * ease;
-      const dim = focusI >= 0 && l.i !== focusI && !(hHover.line && hHover.line.k === l.k);
-      c.globalAlpha = dim ? .08 : (hHover && hHover.line === l ? 1 : .85);
+      const dim = focusI >= 0 && l.i !== focusI;
+      c.globalAlpha = dim ? .12 : 1;
       c.strokeStyle = H.colors[l.i];
-      c.lineWidth = hHover && hHover.line === l ? Math.max(2, lw * 2) : lw;
+      c.lineWidth = hHover && hHover.line === l ? Math.max(2.5, lw * 1.8) : lw;
       c.beginPath(); c.moveTo(xs, yL); c.lineTo(g.xBend, yL); c.lineTo(g.xEnd, yR); c.stroke();
-      if (l.chk) {           // the part of the line that was fixing what was already straight, in red, at the far end
-        const xr = xs + (g.xBend - xs) * (l.chk / l.n);
-        c.strokeStyle = '#E2341D'; c.beginPath(); c.moveTo(xs, yL); c.lineTo(xr, yL); c.stroke();
-      }
       l._y = yL; l._x = xs;
     });
-    c.globalAlpha = 1;
-    // the sixty, straight, in board order
+    // the sixty: a swatch of each shape's colour, and its name
+    const fs = Math.max(8, Math.min(13, g.row * .82));
+    c.font = `italic ${fs}px Georgia, "Times New Roman", serif`; c.textBaseline = 'middle';
     for (let i = 0; i < N; i++) {
-      const y = g.top + (i + .5) * g.row, n = shown.filter(l => l.i === i).length;
-      c.globalAlpha = focusI >= 0 && focusI !== i ? .3 : 1;
-      c.fillStyle = '#fff'; c.fillRect(g.xIcon - 1, y - g.icon / 2 - 1, g.icon + 2, g.icon + 2);
-      const im = sprites && sprites[i] && sprites[i][STRAIGHT]; if (im) c.drawImage(im, g.xIcon, y - g.icon / 2, g.icon, g.icon);
-      if (n && g.row >= 8) { c.fillStyle = '#8C8981'; c.font = `${Math.min(10, g.row * .7)}px ${getComputedStyle(document.body).fontFamily}`; c.textBaseline = 'middle'; c.fillText(String(n), g.xIcon + g.icon + 8, y); }
+      const y = g.top + (i + .5) * g.row, has = shown.some(l => l.i === i);
+      c.globalAlpha = focusI >= 0 && focusI !== i ? .25 : has ? 1 : .35;
+      c.fillStyle = H.colors[i]; c.fillRect(g.xSw, y - g.row * .42, 12, g.row * .84);
+      c.fillStyle = '#6E6B64'; c.fillText(H.names[i], g.xLabel, y);
     }
     c.globalAlpha = 1;
     if (p < 1) hAnim = requestAnimationFrame(drawHands);
@@ -1957,7 +1958,7 @@ const Archive = (() => {
   function hHit(x, y) {
     if (!H) return null;
     const g = hGeom();
-    if (x >= g.xIcon - 6) { const i = Math.floor((y - g.top) / g.row); return i >= 0 && i < N ? { i } : null; }
+    if (x >= g.xSw - 4) { const i = Math.floor((y - g.top) / g.row); return i >= 0 && i < N ? { i } : null; }
     if (x > g.xBend) return null;
     const shown = H.lines.filter(visible); let best = null, bd = 6;
     shown.forEach(l => { if (x >= l._x - 4) { const d = Math.abs(l._y - y); if (d < bd) { bd = d; best = l; } } });
@@ -1969,10 +1970,10 @@ const Archive = (() => {
     let html;
     if (hh.line) {
       const l = hh.line, r = l.r, who = r === mine ? 'You' : r.name ? esc(r.name) : `Visitor ${String(l.k + 1).padStart(3, '0')}`;
-      html = `${who}${r.demo ? ' <i>· demo</i>' : ''}<br>touched it ${l.n}×${l.chk ? `, ${l.chk} of them when it was already straight` : ''}<br><i>still at it at ${mmss(l.t)}</i>`;
+      html = `${who}${r.demo ? ' <i>· demo</i>' : ''}<br>went back to the ${H.names[l.i].toLowerCase()} ${l.n} times`;
     } else {
-      const ls = H.lines.filter(l => visible(l) && l.i === hh.i), c = ls.reduce((a, l) => a + l.chk, 0), t = ls.reduce((a, l) => a + l.n, 0);
-      html = ls.length ? `${ls.length} ${ls.length === 1 ? 'person' : 'people'} kept going back to this one<br><i>${Math.round(c / Math.max(1, t) * 100)}% of those touches came when it was already straight</i>` : '<i>nobody went back to this one</i>';
+      const ls = H.lines.filter(l => visible(l) && l.i === hh.i);
+      html = ls.length ? `${H.names[hh.i]}<br><i>${ls.length} ${ls.length === 1 ? 'line' : 'lines'} end here</i>` : `${H.names[hh.i]}<br><i>nobody kept going back to this one</i>`;
     }
     tip.innerHTML = html; tip.classList.add('on');
     const w = tip.offsetWidth, hgt = tip.offsetHeight;
