@@ -1129,7 +1129,8 @@ function askBackground() {
     const d = document.createElement('div');
     d.className = 'fl';
     const [x, y, sz, r0, dx, dy, rr, dur, o] = p;
-    d.style.cssText = `--x:${x}vw;--y:${y}vh;--sz:${sz}vmin;--r0:${r0}deg;--dx:${dx}vmin;--dy:${dy}vmin;--rr:${rr}deg;--d:${dur}s;--dl:${-(k * 7.3) % dur}s;--o:${o}`;
+    const D = dur * .55;   // more travel, a bit quicker: you notice them moving, but they never hurry
+    d.style.cssText = `--x:${x}vw;--y:${y}vh;--sz:${sz}vmin;--r0:${r0}deg;--dx:${dx * 3.2}vmin;--dy:${dy * 3.2}vmin;--rr:${rr * 2.5}deg;--d:${D}s;--dl:${-(k * 7.3) % D}s;--o:${o}`;
     d.appendChild(svg);
     bg.appendChild(d);
   });
