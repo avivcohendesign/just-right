@@ -1167,7 +1167,14 @@ function init() {
   // first the question; the opening line only after it is answered
   const ask = $('ask');
   // straight to the archive from the first screen, and back again
-  $('askArch').addEventListener('click', () => { ask.classList.add('peek'); document.body.classList.add('peek'); Archive.show(); });
+  // (on the published site the archive has to be fetched first: the question stays up until it is ready, so the board never shows in between)
+  $('askArch').addEventListener('click', async () => {
+    const b = $('askArch'); if (b.disabled) return;
+    b.disabled = true; b.textContent = 'Opening the archive…';
+    await Archive.show();
+    document.body.classList.add('peek');
+    setTimeout(() => { ask.classList.add('peek'); b.disabled = false; b.textContent = 'See the archive →'; }, 1300);   // once the archive has faded in over it
+  });
   $('archHome').addEventListener('click', () => { Archive.hide(); document.body.classList.remove('peek'); ask.classList.remove('peek'); });
   ask.querySelectorAll('.ask-b button').forEach(b => b.addEventListener('click', () => {
     state.ocd = b.dataset.a;
@@ -1868,7 +1875,7 @@ const Archive = (() => {
     if (MODE === 'live') remote = await Remote.list();
     layout();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
-    ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); });
+    return ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); });
   }
 
   /* ======================================================
