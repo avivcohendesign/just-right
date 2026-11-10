@@ -434,7 +434,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 </div>
 
 <div class="archive" id="archive" aria-label="Archive"><canvas id="archCanvas"></canvas></div>
-<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">Each line is one board. Higher up: more of it was really straight. Longer: they stayed longer. Colour: <span style="color:#1D3FD8">OCD</span> · <span style="color:#F26B1D">don’t know</span> · <span style="color:#0F8A86">no OCD</span> · <span style="color:#A3A098">didn’t say</span></div></div>
+<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">Each line is one board. Higher up: more of it was really straight. Length: how long they played. Colour: <span style="color:#1D3FD8">OCD</span> · <span style="color:#F26B1D">don’t know</span> · <span style="color:#0F8A86">no OCD</span> · <span style="color:#A3A098">didn’t say</span></div></div>
 <div class="hands-tip" id="handsTip"></div>
 <button class="arch-home" id="archHome">← Back to the game</button>
 <div class="arch-view" id="archView"><button data-v="boards" class="sel">Boards</button><button data-v="hands">Lines</button></div>
@@ -1891,12 +1891,12 @@ const Archive = (() => {
       const m = lines.find(l => l.r === mine); if (m && !keep.includes(m)) { keep.push(m); keep.sort((a, b) => b.solved - a.solved || b.t - a.t); }
       lines = keep;
     }
-    const ts = lines.map(l => Math.log(10 + l.t)), lo = Math.min(...ts), hi = Math.max(...ts);
-    lines.forEach((l, j) => { l.len = .08 + .92 * (ts[j] - lo) / (hi - lo || 1); });
-    return { lines };
+    const tMax = Math.max(60, ...lines.map(l => l.t));          // the length is the time itself: twice as long, twice as far
+    lines.forEach(l => { l.len = l.t / tMax; });
+    return { lines, tMax };
   }
   function hGeom() {
-    const W = innerWidth, Hh = innerHeight, top = 100, bot = Hh - 124;
+    const W = innerWidth, Hh = innerHeight, top = 100, bot = Hh - 140;
     const xR = W - 40 - Math.min(170, W * .15), x0 = 40;
     return { W, Hh, top, bot, xR, x0 };
   }
@@ -1928,6 +1928,16 @@ const Archive = (() => {
       const y = g.top + (j + .5) * lineH;
       if ((j === 0 || l.solved !== H.lines[j - 1].solved) && y - lastY > 16) { c.fillText(`${l.solved} of ${N} straight`, g.xR + 16, y); lastY = y; }
     });
+    // time, measured from the right edge leftwards
+    const span = g.xR - g.x0, step = [60, 120, 300, 600, 900, 1800, 3600].find(v => H.tMax / v <= 8) || 3600, ty = g.bot + 14;
+    c.font = `10px ${getComputedStyle(document.body).fontFamily}`; c.fillStyle = '#8C8981'; c.textAlign = 'center';
+    c.fillRect(g.x0, ty - 7, span, 1);
+    for (let v = 0; v <= H.tMax; v += step) {
+      const x = g.xR - v / H.tMax * span;
+      c.fillRect(x - .5, ty - 10, 1, 7);
+      c.fillText(v ? `${Math.round(v / 60)} min` : '0', x, ty + 4);
+    }
+    c.textAlign = 'left';
     if (p < 1) hAnim = requestAnimationFrame(drawHands);
   }
   const hRedraw = () => { if (!hAnim) hAnim = requestAnimationFrame(drawHands); };
