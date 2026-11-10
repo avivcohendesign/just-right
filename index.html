@@ -1361,10 +1361,10 @@ const Archive = (() => {
   let remote = [];
   function layout() {
     const past = MODE === 'live'
-      ? remote.filter(r => !(mine && r.at === mine.at))                                  // the published site: only real people
+      ? [...remote.filter(r => !(mine && r.at === mine.at)), ...demos(60)]               // the published site: real people, plus sixty demo visitors (marked "demo")
       : [...load().filter(r => r.lv && r.lv.length === N && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
     list = mine ? [mine, ...past] : past;
-    const GW = 54, GH = Math.max(20, Math.round(GW * CW / CH / (innerWidth / innerHeight)));
+    const GW = Math.max(10, Math.min(54, Math.round(Math.sqrt(list.length) * 2.2))), GH = Math.max(6, Math.round(GW * CW / CH / (innerWidth / innerHeight)));
     const ld = list.map(r => Math.log(Math.max(20, r.dur))), lo = Math.min(...ld), hi = Math.max(...ld);
     const R = mulberry(77);
     const order = list.map((r, i) => i).sort((a, b) => (list[b] === mine) - (list[a] === mine) || R() - .5);
