@@ -356,13 +356,17 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 .hands-key{position:fixed;left:40px;top:30px;z-index:31;font-size:10px;letter-spacing:.06em;color:var(--mute);line-height:1.6;max-width:min(420px,calc(50vw - 120px));pointer-events:none}
 .hands-key b{font-weight:400;color:var(--red)}
 /* the archive, sorted by what people said */
-.arch-ocd{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:31;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.arch-ocd{position:fixed;right:36px;bottom:32px;z-index:31;display:flex;flex-direction:column;align-items:flex-start;gap:7px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
 .arch-ocd.on{opacity:1;pointer-events:auto}
-.arch-ocd button{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:9px 12px;color:var(--mute);cursor:pointer}
-.arch-ocd button[data-f="yes"]::before,.arch-ocd button[data-f="maybe"]::before,.arch-ocd button[data-f="no"]::before,.arch-ocd button[data-f="skip"]::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;vertical-align:0}
+/* a small key: a square of colour and what it means. Click one to see only them; click it again for everyone. */
+.arch-ocd button{font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:none;border:0;padding:0;color:var(--mute);cursor:pointer;display:flex;align-items:center;gap:8px;transition:color 200ms,opacity 200ms}
+.arch-ocd button[data-f="all"]{display:none}
+.arch-ocd button::before{content:"";width:9px;height:9px;flex:none}
 .arch-ocd button[data-f="yes"]::before{background:#E8619E}.arch-ocd button[data-f="maybe"]::before{background:#0E9F6E}.arch-ocd button[data-f="no"]::before{background:#1D3FD8}.arch-ocd button[data-f="skip"]::before{background:#F26B1D}
-.arch-ocd button.sel{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:var(--tile)}
-.arch-stat{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:31;font-size:11px;letter-spacing:.06em;color:var(--ink);background:var(--tile);padding:8px 12px;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;transition:opacity 500ms ease;pointer-events:none}
+.arch-ocd button:hover{color:var(--ink)}
+.arch-ocd.filtered button{opacity:.4}
+.arch-ocd.filtered button.sel{opacity:1;color:var(--ink)}
+.arch-stat{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);z-index:31;font-size:11px;letter-spacing:.06em;line-height:1.5;color:var(--ink);background:var(--tile);padding:8px 12px;width:max-content;max-width:calc(100vw - 440px);text-align:center;font-variant-numeric:tabular-nums;opacity:0;transition:opacity 500ms ease;pointer-events:none}
 .arch-stat.on{opacity:1}
 .archive.focus ~ .arch-ocd,.archive.focus ~ .arch-stat{opacity:0;pointer-events:none}
 /* ---------- the archive: hundreds of boards, the same sixty shapes, to wander through ---------- */
@@ -1805,8 +1809,9 @@ const Archive = (() => {
     $('azOut').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1 / 1.5);
     // compare by what people said about themselves
     $('archOcd').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-      filt = b.dataset.f;
-      $('archOcd').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x === b));
+      filt = b.dataset.f === filt ? 'all' : b.dataset.f;        // clicking the same one again shows everyone
+      $('archOcd').querySelectorAll('button').forEach(x => x.classList.toggle('sel', x.dataset.f === filt));
+      $('archOcd').classList.toggle('filtered', filt !== 'all');
       const grp = list.filter(r => r.ocd === filt), rest = list.filter(r => r.ocd !== filt);
       const chk = g => median(g.map(r => { const c = checks(r, list.indexOf(r)); return c ? Math.round(c.n / c.of * 100) : 0; }));
       const line = g => `${fmtDur(median(g.map(r => r.dur)))} · ${median(g.map(r => r.corr))} corrections · ${median(g.map(r => r.left))} left crooked · ${chk(g)}% re-fixing what was right`;
