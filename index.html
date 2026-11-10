@@ -380,7 +380,6 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
   <button id="zin" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 2v10M2 7h10"/></svg></button>
   <div class="zread" id="zread">1.0×</div>
   <button id="zout" title="Zoom out (−)" aria-label="Zoom out"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 7h10"/></svg></button>
-  <button id="zreset" class="zreset" title="Reset (0)" aria-label="Reset zoom">1:1</button>
 </div>
 
 <div class="ritual" id="ritual" hidden>
@@ -2307,7 +2306,7 @@ window.addEventListener('resize', () => { sizeFrame(); applyView(); });
 
 $('zin').addEventListener('click', () => { if (!blocked()) zoomCenter(1.5); });
 $('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5); });
-$('zreset').addEventListener('click', () => { if (!blocked()) resetView(true); });
+// (the 1:1 button is gone; 0 on the keyboard still resets the view)
 
 /* ======================================================
    The inner voice — two lines that argue.
