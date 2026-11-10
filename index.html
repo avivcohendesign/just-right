@@ -270,15 +270,24 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 /* ---------- the question, before anything ---------- */
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
-.ask-in{max-width:520px;padding:0 24px;opacity:0;animation:appear 1400ms 300ms ease forwards}
-.ask-q{font-size:clamp(20px,2.2vw,28px);font-weight:500;letter-spacing:-.01em}
-.ask-b{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.ask{overflow:hidden}
+.ask-in{position:relative;z-index:1;max-width:560px;padding:0 24px;text-align:center;opacity:0;animation:appear 1400ms 300ms ease forwards}
+.ask-in::before{content:"";position:absolute;z-index:-1;left:50%;top:50%;width:150%;height:170%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,var(--bg) 55%,rgba(241,239,234,0));pointer-events:none}
+.ask-q{font-size:clamp(22px,2.6vw,32px);font-weight:500;letter-spacing:-.015em;line-height:1.15;text-wrap:balance}
+@media (orientation:portrait){.ask-bg .fl{width:calc(var(--sz) * 1.5);height:calc(var(--sz) * 1.5)}}
+.ask-b{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:28px}
+/* the first screen's background: some of the sixty, large and faint, drifting */
+.ask-bg{position:absolute;inset:0;pointer-events:none;opacity:0;animation:appear 2600ms 200ms ease forwards}
+.ask-bg .fl{position:absolute;width:var(--sz);height:var(--sz);left:var(--x);top:var(--y);opacity:var(--o,.13);animation:drift var(--d,30s) ease-in-out var(--dl,0s) infinite alternate;will-change:transform}
+.ask-bg .fl svg{width:100%;height:100%;display:block;transform:rotate(var(--r0,0deg))}
+@keyframes drift{from{transform:translate(0,0) rotate(calc(var(--rr,4deg) * -1))}to{transform:translate(var(--dx,2vmin),var(--dy,-3vmin)) rotate(var(--rr,4deg))}}
+@media (prefers-reduced-motion:reduce){.ask-bg .fl{animation:none}}
 .ask-b button{font:inherit;font-size:13px;background:var(--tile);border:0;padding:12px 16px;color:var(--ink);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(20,20,20,.06)}
 .ask-b button:hover{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue)}
-.ask-n{font-size:11px;color:var(--mute);margin-top:22px;line-height:1.5}
-.ask-name{display:block;margin-bottom:34px}
+.ask-n{font-size:11px;color:var(--mute);margin:24px auto 0;line-height:1.55;max-width:420px;text-wrap:balance}
+.ask-name{display:block;margin:0 auto 40px;max-width:380px}
 .ask-name span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
-.ask-name input{font:inherit;font-size:18px;width:100%;background:transparent;border:0;border-bottom:1px solid var(--mute);padding:6px 0;color:var(--ink);outline:none}
+.ask-name input{font:inherit;font-size:18px;width:100%;text-align:center;background:transparent;border:0;border-bottom:1px solid var(--mute);padding:6px 0;color:var(--ink);outline:none}
 .ask-name input:focus{border-bottom-color:var(--blue)}
 .ask-name input::placeholder{color:var(--mute);opacity:.6}
 /* the archive, sorted by what people said */
@@ -344,7 +353,7 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 
 <!-- no on-screen next button; N still moves to the next board (for presenting) -->
 
-<div class="ask" id="ask"><div class="ask-in">
+<div class="ask" id="ask"><div class="ask-bg" id="askBg" aria-hidden="true"></div><div class="ask-in">
   <label class="ask-name"><span>Your name — if you want it on your board</span><input id="askName" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Leave empty to stay anonymous"></label>
   <div class="ask-q">Before you start — do you have OCD?</div>
   <div class="ask-b"><button data-a="yes">Yes, diagnosed</button><button data-a="maybe">I don’t know</button><button data-a="no">No</button><button data-a="skip">I’d rather not say</button></div>
@@ -1059,6 +1068,7 @@ function init() {
   ARCH.initial = Archive.levels();   // how crooked the board is when anyone sits down
   state.locked = true;   // stays locked until the intro is dismissed
   render();
+  askBackground();
 
   const intro = $('intro');
   const go = () => {
@@ -1085,6 +1095,43 @@ function init() {
     setTimeout(go, 3600);
     intro.addEventListener('pointerdown', () => setTimeout(go, 200));
   }));
+}
+
+/* the first screen: a few of the sixty, large and faint, drifting slowly around the question */
+function askBackground() {
+  const bg = $('askBg'); if (!bg) return;
+  //        x     y     size  rot   dx    dy    turn  dur  opacity
+  const spots = [
+    [-7,  -10,  46,  -8,   3,   4,   5,  38, .13],
+    [69,  -14,  40,   6,  -4,   3,   4,  44, .12],
+    [86,   27,  30,  -4,  -3,  -4,   6,  33, .15],
+    [74,   63,  48,  10,  -2,  -5,   4,  47, .12],
+    [37,   80,  30,  -3,   4,  -3,   5,  36, .11],
+    [ 3,   58,  42,   5,   4,  -3,   5,  41, .13],
+    [-9,   27,  24,  12,   3,   3,   7,  29, .14],
+    [22,    5,  17,  -6,   3,   4,   8,  26, .17],
+    [58,   13,  13,   9,  -3,   3,   9,  24, .18],
+    [25,   77,  14,  -9,   3,  -3,   8,  27, .16],
+    [93,    4,  12,   4,  -2,   4,   9,  23, .17],
+    [16,   41,   9,  14,   2,   3,  10,  21, .2 ],
+    [83,   52,   9,  -12, -2,   3,  10,  22, .2 ],
+  ];
+  const e = computeErrors(), tol = LV().tol, seen = new Set(), pick = [];
+  state.tiles.forEach(t => { if (!seen.has(t.shape)) { seen.add(t.shape); pick.push(t); } });
+  spots.forEach((p, k) => {
+    const t = pick[(k * 5) % pick.length];
+    t.update(0);
+    const svg = t.el.querySelector('svg').cloneNode(true);
+    svg.querySelectorAll('.trk,.thumb,.ok').forEach(n => n.remove());
+    svg.removeAttribute('id');
+    const d = document.createElement('div');
+    d.className = 'fl';
+    const [x, y, sz, r0, dx, dy, rr, dur, o] = p;
+    d.style.cssText = `--x:${x}vw;--y:${y}vh;--sz:${sz}vmin;--r0:${r0}deg;--dx:${dx}vmin;--dy:${dy}vmin;--rr:${rr}deg;--d:${dur}s;--dl:${-(k * 7.3) % dur}s;--o:${o}`;
+    d.appendChild(svg);
+    bg.appendChild(d);
+  });
+  state.tiles.forEach((t, i) => t.update(flaw(e[i], tol)));   // the board goes back to how it was
 }
 
 /* the clock: the time of day, not the time spent */
