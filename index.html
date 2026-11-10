@@ -396,7 +396,7 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 // one board. seventy shapes. every one is tied to exactly one other —
 // and the ties close into a single loop, so nothing can be fixed alone.
 const LEVELS = [
-  { c: 10, r: 7, k: .58, n: 1, tol: .009 }
+  { c: 10, r: 6, k: .58, n: 1, tol: .009 }   // sixty shapes
 ];
 const levelDef = i => LEVELS[Math.min(i, LEVELS.length - 1)];
 const LV = () => levelDef(state.level);
@@ -966,8 +966,8 @@ function relapse() {
 /* the field keeps square cells; its outline follows c × r */
 function sizeFrame() {
   const { c, r } = LV();
-  // the field fills the whole screen, edge to edge — and runs a little past it
-  const cell = Math.max(innerWidth / c, innerHeight / r);
+  // the field fills the screen as far as it can without cutting any row or column off
+  const cell = Math.min(innerWidth / c, innerHeight / r);
   frame.style.width = `${cell * c}px`;
   frame.style.height = `${cell * r}px`;
   frame.style.left = `${(innerWidth - cell * c) / 2}px`;
@@ -1198,8 +1198,8 @@ const Archive = (() => {
       // how many they left crooked, calibrated to how the board really behaves: the shapes pull on each
       // other and drift back, so most people leave somewhere between thirty and sixty-five. Almost nobody gets below twenty.
       const u0 = R(), stay = Math.min(1, Math.log(dur / 40) / Math.log(40));  // staying longer helps — a little
-      let L = u0 < .08 ? rr(14, 30) : u0 < .9 ? rr(30, 65) - stay * 8 : rr(64, 70);
-      L = Math.max(9, Math.min(N, Math.round(L)));
+      let L = (u0 < .08 ? rr(14, 30) : u0 < .9 ? rr(30, 65) - stay * 8 : rr(64, 70)) * N / 70;   // (calibrated on seventy shapes, scaled to the board)
+      L = Math.max(8, Math.min(N, Math.round(L)));
       // which ones: the hard few nearly always, the rest by chance
       const pool = hard.map((h, i) => [i, (h > .3 ? 6 : 1) * (.5 + R())]), lv = new Array(N).fill(STRAIGHT);
       for (let n = 0; n < L; n++) {
@@ -1343,7 +1343,7 @@ const Archive = (() => {
   function layout() {
     const past = MODE === 'live'
       ? remote.filter(r => !(mine && r.at === mine.at))                                  // the published site: only real people
-      : [...load().filter(r => r.lv && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
+      : [...load().filter(r => r.lv && r.lv.length === N && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
     list = mine ? [mine, ...past] : past;
     const GW = 54, GH = Math.max(20, Math.round(GW * CW / CH / (innerWidth / innerHeight)));
     const ld = list.map(r => Math.log(Math.max(20, r.dur))), lo = Math.min(...ld), hi = Math.max(...ld);
