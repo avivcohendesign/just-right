@@ -356,7 +356,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 .arch-ocd.on{opacity:1;pointer-events:auto}
 .arch-ocd button{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:9px 12px;color:var(--mute);cursor:pointer}
 .arch-ocd button[data-f="yes"]::before,.arch-ocd button[data-f="maybe"]::before,.arch-ocd button[data-f="no"]::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;vertical-align:0}
-.arch-ocd button[data-f="yes"]::before{background:#1D3FD8}.arch-ocd button[data-f="maybe"]::before{background:#F26B1D}.arch-ocd button[data-f="no"]::before{background:#0F8A86}
+.arch-ocd button[data-f="yes"]::before{background:#E8619E}.arch-ocd button[data-f="maybe"]::before{background:#0E9F6E}.arch-ocd button[data-f="no"]::before{background:#1D3FD8}
 .arch-ocd button.sel{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:var(--tile)}
 .arch-stat{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:31;font-size:11px;letter-spacing:.06em;color:var(--ink);background:var(--tile);padding:8px 12px;white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;transition:opacity 500ms ease;pointer-events:none}
 .arch-stat.on{opacity:1}
@@ -434,7 +434,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 </div>
 
 <div class="archive" id="archive" aria-label="Archive"><canvas id="archCanvas"></canvas></div>
-<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">Each line is one board. Higher up: more of it was really straight. Length: how long they played. Colour: <span style="color:#1D3FD8">OCD</span> · <span style="color:#F26B1D">don’t know</span> · <span style="color:#0F8A86">no OCD</span> · <span style="color:#A3A098">didn’t say</span></div></div>
+<div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas><div class="hands-key">Each line is one board. Higher up: more of it was really straight. Length: how long they played. Colour: <span style="color:#E8619E">OCD</span> · <span style="color:#1D3FD8">no OCD</span> · <span style="color:#0E9F6E">don’t know</span> · <span style="color:#F26B1D">rather not say</span></div></div>
 <div class="hands-tip" id="handsTip"></div>
 <button class="arch-home" id="archHome">← Back to the game</button>
 <div class="arch-view" id="archView"><button data-v="boards" class="sel">Boards</button><button data-v="hands">Lines</button></div>
@@ -1880,7 +1880,7 @@ const Archive = (() => {
   function session(r, k) { return r.ev ? { start: r.start || START(), ev: r.ev, th: r.th || [] } : r.demo ? simulate(r, k) : null; }
   /* every board as one straight line. Higher: more of it was really straight at the end.
      Longer: they stayed longer. Colour: what they answered when asked about OCD. */
-  const OCD_COL = { yes: '#1D3FD8', maybe: '#F26B1D', no: '#0F8A86', skip: '#C9C6BE' };
+  const OCD_COL = { yes: '#E8619E', maybe: '#0E9F6E', no: '#1D3FD8', skip: '#F26B1D' };
   const OCD_SAID = { yes: 'has OCD', maybe: 'doesn’t know', no: 'no OCD', skip: 'didn’t say' };
   function handLines() {
     let lines = list.map((r, k) => ({ k, r, solved: N - r.left, t: r.total || r.dur || 1 }));
