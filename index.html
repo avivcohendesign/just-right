@@ -365,7 +365,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 .arch-ocd button{font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:none;border:0;padding:0;color:var(--mute);cursor:pointer;display:flex;align-items:center;gap:8px;transition:color 200ms,opacity 200ms}
 .arch-ocd button[data-f="all"]{display:none}
 .arch-ocd button::before{content:"";width:9px;height:9px;flex:none}
-.arch-ocd button[data-f="yes"]::before{background:#E8619E}.arch-ocd button[data-f="maybe"]::before{background:#0E9F6E}.arch-ocd button[data-f="no"]::before{background:#1D3FD8}.arch-ocd button[data-f="skip"]::before{background:#F26B1D}
+.arch-ocd button[data-f="yes"]::before{background:#E2341D}.arch-ocd button[data-f="maybe"]::before{background:#0E9F6E}.arch-ocd button[data-f="no"]::before{background:#1D3FD8}.arch-ocd button[data-f="skip"]::before{background:#E8619E}
 .arch-ocd button:hover{color:var(--ink)}
 .arch-ocd.filtered button{opacity:.4}
 .arch-ocd.filtered button.sel{opacity:1;color:var(--ink)}
@@ -1899,7 +1899,7 @@ const Archive = (() => {
   function session(r, k) { return r.ev ? { start: r.start || START(), ev: r.ev, th: r.th || [] } : r.demo ? simulate(r, k) : null; }
   /* every board as one straight line. Higher: more of it was really straight at the end.
      Longer: they stayed longer. Colour: what they answered when asked about OCD. */
-  const OCD_COL = { yes: '#E8619E', maybe: '#0E9F6E', no: '#1D3FD8', skip: '#F26B1D' };
+  const OCD_COL = { yes: '#E2341D', maybe: '#0E9F6E', no: '#1D3FD8', skip: '#E8619E' };
   const OCD_SAID = { yes: 'has OCD', maybe: 'doesn’t know', no: 'no OCD', skip: 'didn’t say' };
   function handLines() {
     let lines = list.map((r, k) => ({ k, r, solved: N - r.left, t: r.total || r.dur || 1 }));
