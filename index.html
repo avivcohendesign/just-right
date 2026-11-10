@@ -2221,7 +2221,7 @@ window.addEventListener('pointerup', endPointer);
 window.addEventListener('pointercancel', endPointer);
 
 document.addEventListener('keydown', ev => {
-  if (ev.key === ' ' && !state.ritual) { ev.preventDefault(); if (!spaceDown) { spaceDown = true; applyView(); } }
+  if (ev.key === ' ' && !state.ritual && !(ev.target && ev.target.tagName === 'INPUT')) { ev.preventDefault(); if (!spaceDown) { spaceDown = true; applyView(); } }
 });
 document.addEventListener('keyup', ev => {
   if (ev.key === ' ') { spaceDown = false; applyView(); }
@@ -2570,6 +2570,11 @@ function skip() {
 
 document.addEventListener('keydown', ev => {
   if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA')) {   // typing your name is just typing
+    if (ev.key === 'Enter') ev.target.blur();
+    return;
+  }
+  if ($('ask') && !$('ask').classList.contains('out')) return;   // nothing happens before the question is answered
   const r = state.ritual;
   if (ev.key === 'd' || ev.key === 'D') { document.body.classList.toggle('nodemo'); return; }
   if (ev.key === 'm' || ev.key === 'M') { Sound.toggle(); return; }
