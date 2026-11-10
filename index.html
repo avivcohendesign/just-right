@@ -264,7 +264,9 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 .endbar.on{opacity:1;pointer-events:auto}
 .endbar button{font:inherit;font-size:10px;letter-spacing:.14em;text-transform:uppercase;height:30px;padding:0 14px;background:transparent;border:0;box-shadow:inset 0 0 0 1px rgba(20,20,20,.18);color:var(--mute);cursor:pointer;transition:color 250ms,box-shadow 250ms}
 .endbar button:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.ap-end{font-size:12px;color:var(--mute);margin-top:6px}
+.ap-verdict{font-size:19px;line-height:1.35;letter-spacing:-.01em;margin-top:22px}
+.ap-verdict b{font-weight:500;color:var(--red)}
+.ap-verdict span:empty{display:none}
 /* ---------- the question, before anything ---------- */
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
@@ -751,21 +753,14 @@ function render() {
     t.thumb.setAttribute('x', (14 + 72 * t.s - 1.6).toFixed(2));
     t.el.setAttribute('aria-valuenow', Math.round(t.s * 100));
     if (p && !t.perfect) t.rightSince = performance.now();
-    if (p && !t.perfect && !state.locked) { snap(t); fixed = t; Sound.right(); }
+    if (p && !t.perfect && !state.locked) fixed = t;          // (no snap, no chime: you're never told a shape is right)
     if (!p && t.perfect && !state.locked && !(state.drag && state.drag.tile === t)) broke = t;
     t.perfect = p;
-    t.ok.setAttribute('opacity', p ? 1 : 0);
-    t.el.classList.toggle('right', p);
+    t.ok.setAttribute('opacity', 0);
     if (p) count++;
   });
-  hud(count);
   const tot = state.tiles.length;
-  Sound.level(1 - count / tot);
-  if (!state.locked && !state.drifting && count < tot) {
-    if (broke) { Voice.say('break', broke); Sound.crack(); }
-    else if (count === tot - 1 && tot >= 3) Voice.say('almost', state.tiles.find(t => !t.perfect));
-    else if (fixed) Voice.say('perfect', fixed);
-  }
+  Sound.level(.55);                                           // the room sounds the same however far along you are
   return count === tot;
 }
 
@@ -852,7 +847,7 @@ function begin() {
 }
 
 function afterInput() {
-  if (render() && !state.locked) solved();
+  render();             // even when every shape is right, nothing happens. Only you can decide you're done.
 }
 
 /* ---------- The curse ---------- */
@@ -1474,8 +1469,8 @@ const Archive = (() => {
     P.innerHTML = `<div class="ap-top"><span class="arch-k">${i + 1} / ${list.length}</span><button class="ap-x" id="apX">Back · Esc</button></div>
       <div class="ap-who${you ? ' you' : ''}">${you ? 'You' : rec.name ? esc(rec.name) : `Visitor ${String(i + 1).padStart(3, '0')}`}</div>
       <div class="ap-when">${you ? 'just now' : fmtAt(rec.at)}${rec.demo ? ' · demo' : ''}${rec.name ? '' : ` · ${said}`}</div>
-      <div class="ap-end" id="apEnd">${endText(rec)}</div>
-      <div class="ap-line-s">${fmtDur(rec.dur)} · ${rec.corr.toLocaleString('en')} corrections · <span style="color:var(--red)">${rec.left} left crooked</span></div>
+      <div class="ap-verdict"><span id="apEnd">${endText(rec)}</span> <b>${N - rec.left}</b> of ${N} were really straight.</div>
+      <div class="ap-line-s">${fmtDur(rec.dur)} · ${rec.corr.toLocaleString('en')} corrections</div>
       <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
         <div class="ap-axis"><span>how much of it was right</span><button class="ap-again" id="apAgain">Watch again</button></div></div>
       ${(() => { const c = checks(rec, i); return c ? `<div class="ap-sec"><div class="arch-k">Fixing what wasn’t broken</div>
@@ -2449,6 +2444,7 @@ const Voice = (() => {
   }
 
   function say(cat, tile, force) {
+    return;   // no notes during the game: nothing tells you how you're doing
     if (cat !== 'demo' && !VOICE_LINES[cat]) return;
     if (!force && SOMETIMES.has(cat) && Math.random() > .65) return;
     if (!force && (state.locked || state.ritual || !state.started)) return;
