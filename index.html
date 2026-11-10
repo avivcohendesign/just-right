@@ -1068,12 +1068,14 @@ function sizeFrame() {
   const W = innerWidth, H = innerHeight, M = Math.max(24, Math.round(Math.min(W, H) * .045)), g = .101;
   const B = M + Math.max(44, Math.round(M * 1.2));    // the bottom keeps extra room: that is where the two buttons sit
   const S = Math.min((W - 2 * M) / (c + (c - 1) * g), (H - M - B) / (r + (r - 1) * g));
-  const gx = (W - 2 * M - c * S) / (c - 1), gy = (H - M - B - r * S) / (r - 1);
+  // the same gap between columns as between rows; whatever room is left over goes to the margins, so the board sits centred
+  const gx = Math.min(g * S, (W - 2 * M - c * S) / (c - 1)), gy = Math.min(g * S, (H - M - B - r * S) / (r - 1));
   const cw = S + gx, ch = S + gy;
+  const ox = (W - (c * S + (c - 1) * gx)) / 2, oy = M + ((H - M - B) - (r * S + (r - 1) * gy)) / 2;
   frame.style.width = `${cw * c}px`;
   frame.style.height = `${ch * r}px`;
-  frame.style.left = `${M - gx / 2}px`;
-  frame.style.top = `${M - gy / 2}px`;
+  frame.style.left = `${ox - gx / 2}px`;
+  frame.style.top = `${oy - gy / 2}px`;
   document.documentElement.style.setProperty('--M', `${M}px`);
   document.documentElement.style.setProperty('--B', `${B}px`);
   frame.style.setProperty('--ix', `${(gx / 2).toFixed(2)}px`);
