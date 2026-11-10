@@ -260,7 +260,7 @@ body.harmony .tile::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,0)}
 body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 
 /* ---------- two ways out, in the bottom margin ---------- */
-.endbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc((var(--M, 40px) - 30px) / 2);z-index:6;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity 1400ms ease}
+.endbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc((var(--B, 90px) - 30px) / 2);z-index:6;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity 1400ms ease}
 .endbar.on{opacity:1;pointer-events:auto}
 .endbar button{font:inherit;font-size:10px;letter-spacing:.14em;text-transform:uppercase;height:30px;padding:0 14px;background:transparent;border:0;box-shadow:inset 0 0 0 1px rgba(20,20,20,.18);color:var(--mute);cursor:pointer;transition:color 250ms,box-shadow 250ms}
 .endbar button:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
@@ -980,14 +980,16 @@ function sizeFrame() {
   // the same margin on every side — top, bottom, left, right. Tiles stay square; if the screen's
   // proportions don't match the board's, the gaps between them give a little instead.
   const W = innerWidth, H = innerHeight, M = Math.max(24, Math.round(Math.min(W, H) * .045)), g = .101;
-  const S = Math.min((W - 2 * M) / (c + (c - 1) * g), (H - 2 * M) / (r + (r - 1) * g));
-  const gx = (W - 2 * M - c * S) / (c - 1), gy = (H - 2 * M - r * S) / (r - 1);
+  const B = M + Math.max(44, Math.round(M * 1.2));    // the bottom keeps extra room: that is where the two buttons sit
+  const S = Math.min((W - 2 * M) / (c + (c - 1) * g), (H - M - B) / (r + (r - 1) * g));
+  const gx = (W - 2 * M - c * S) / (c - 1), gy = (H - M - B - r * S) / (r - 1);
   const cw = S + gx, ch = S + gy;
   frame.style.width = `${cw * c}px`;
   frame.style.height = `${ch * r}px`;
   frame.style.left = `${M - gx / 2}px`;
   frame.style.top = `${M - gy / 2}px`;
   document.documentElement.style.setProperty('--M', `${M}px`);
+  document.documentElement.style.setProperty('--B', `${B}px`);
   frame.style.setProperty('--ix', `${(gx / 2).toFixed(2)}px`);
   frame.style.setProperty('--iy', `${(gy / 2).toFixed(2)}px`);
   const cell = S / (1 - .092);
