@@ -1533,12 +1533,12 @@ const Archive = (() => {
   }
 
   /* ---- a small picture of every board, for when you're far away ---- */
-  function farThumb(rec) {     // from far away: only what they left crooked, in red. The rest is gone.
+  function farThumb(rec) {     // from far away: only what they left crooked, in the colour of what they answered about OCD. The rest is gone.
     if (rec._fth) return rec._fth;
     const c = document.createElement('canvas'); c.width = COLS * 4; c.height = ROWS * 4;
     const g = c.getContext('2d');
     g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0, 0, c.width, c.height);
-    g.fillStyle = '#E2341D';
+    g.fillStyle = OCD_COL[rec.ocd || 'skip'] || OCD_COL.skip;
     rec.lv.forEach((l, i) => { if (l !== STRAIGHT) g.fillRect((i % COLS) * 4 + .5, Math.floor(i / COLS) * 4 + .5, 3, 3); });
     return (rec._fth = c);
   }
