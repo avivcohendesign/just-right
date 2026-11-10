@@ -263,6 +263,44 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 /* ---------- two ways out, in the bottom margin ---------- */
 .endbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc((var(--B, 90px) - 30px) / 2);z-index:6;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity 1400ms ease}
 .endbar.on{opacity:1;pointer-events:auto}
+/* ---------- tools: help that is also one more way to check ---------- */
+.tray{position:fixed;right:96px;bottom:calc((var(--B, 90px) - 34px) / 2);z-index:6;display:flex;gap:6px}
+.tray button{width:34px;height:34px;padding:0;border:0;background:var(--tile);color:var(--mute);cursor:pointer;display:grid;place-items:center;transition:color 250ms}
+.tray button:hover,.tray button:focus-visible{color:var(--ink);outline:none}
+.tray button.on{color:var(--blue)}
+.tray svg{width:18px;height:18px}
+body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
+.tool{position:fixed;left:0;top:0;z-index:8;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;display:none}
+.tool.on{display:block}
+.tool.dragging{cursor:grabbing}
+/* ruler */
+.ruler{width:440px;height:46px;margin:-23px 0 0 -220px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);box-shadow:0 0 0 1px rgba(20,20,20,.08)}
+.ruler::before{content:"";position:absolute;left:0;right:0;top:0;height:14px;background:
+  repeating-linear-gradient(90deg,rgba(20,20,20,.55) 0 1px,transparent 1px 40px) 0 0/100% 14px no-repeat,
+  repeating-linear-gradient(90deg,rgba(20,20,20,.3) 0 1px,transparent 1px 8px) 0 0/100% 7px no-repeat}
+.ruler::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--blue);opacity:.55}
+.ruler .deg{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);font-size:10px;letter-spacing:.08em;color:var(--mute);font-variant-numeric:tabular-nums;pointer-events:none}
+.ruler .rot{position:absolute;right:-30px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--tile);box-shadow:0 0 0 1px rgba(20,20,20,.14);cursor:alias;display:grid;place-items:center;color:var(--mute)}
+.ruler .rot svg{width:12px;height:12px}
+/* level */
+.level{width:180px;height:44px;margin:-22px 0 0 -90px;background:rgba(255,255,255,.92);box-shadow:0 0 0 1px rgba(20,20,20,.08)}
+.level .tube{position:absolute;left:22px;right:22px;top:50%;height:16px;margin-top:-8px;border-radius:8px;background:var(--bg);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(20,20,20,.06)}
+.level .tube::before,.level .tube::after{content:"";position:absolute;top:0;bottom:0;width:1px;background:rgba(20,20,20,.35)}
+.level .tube::before{left:calc(50% - 10px)}.level .tube::after{left:calc(50% + 9px)}
+.level .bub{position:absolute;left:50%;top:2px;width:16px;height:12px;margin-left:-8px;border-radius:6px;background:var(--blue);opacity:.75}
+/* magnifier */
+.lens{width:210px;height:210px;margin:-105px 0 0 -105px;border-radius:50%;overflow:hidden;background:var(--bg);box-shadow:0 0 0 1px rgba(20,20,20,.12),0 0 0 6px rgba(255,255,255,.9),0 0 0 7px rgba(20,20,20,.08)}
+.lens .lens-in{position:absolute;left:0;top:0;width:100vw;height:100vh;pointer-events:none}
+.lens .lens-in .frame{position:absolute}
+/* grid guide: fine lines through every shape, it zooms with the board */
+.guide{position:absolute;inset:0;z-index:3;pointer-events:none;display:none;
+  background:
+   linear-gradient(90deg,transparent calc(50% - .5px),rgba(29,63,216,.45) calc(50% - .5px),rgba(29,63,216,.45) calc(50% + .5px),transparent calc(50% + .5px)),
+   linear-gradient(0deg,transparent calc(50% - .5px),rgba(29,63,216,.45) calc(50% - .5px),rgba(29,63,216,.45) calc(50% + .5px),transparent calc(50% + .5px)),
+   linear-gradient(90deg,transparent calc(25% - .5px),rgba(29,63,216,.16) calc(25% - .5px),rgba(29,63,216,.16) calc(25% + .5px),transparent calc(25% + .5px),transparent calc(75% - .5px),rgba(29,63,216,.16) calc(75% - .5px),rgba(29,63,216,.16) calc(75% + .5px),transparent calc(75% + .5px)),
+   linear-gradient(0deg,transparent calc(25% - .5px),rgba(29,63,216,.16) calc(25% - .5px),rgba(29,63,216,.16) calc(25% + .5px),transparent calc(25% + .5px),transparent calc(75% - .5px),rgba(29,63,216,.16) calc(75% - .5px),rgba(29,63,216,.16) calc(75% + .5px),transparent calc(75% + .5px));
+  background-size:var(--gw,10%) var(--gh,16.6667%)}
+.guide.on{display:block}
 .endbar{gap:10px}
 .endbar button{font:inherit;font-size:10px;letter-spacing:.16em;text-transform:uppercase;height:34px;padding:0 20px;background:var(--tile);border:0;color:var(--mute);cursor:pointer;transition:color 250ms}   /* flat white, like the tiles */
 .endbar button:hover,.endbar button:focus-visible{color:var(--ink);outline:none}
@@ -377,6 +415,15 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 <div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
 <aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
 
+<div class="tray" id="tray" aria-label="Tools">
+  <button data-tool="ruler" title="Ruler — drag it; scroll or use the handle to turn it" aria-label="Ruler"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="5.5" width="15" height="7"/><path d="M4.5 5.5v3M7.5 5.5v2M10.5 5.5v3M13.5 5.5v2"/></svg></button>
+  <button data-tool="level" title="Spirit level — put it on a shape" aria-label="Spirit level"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="5.5" width="15" height="7"/><rect x="6" y="7.5" width="6" height="3" rx="1.5"/></svg></button>
+  <button data-tool="lens" title="Magnifier" aria-label="Magnifier"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="7.5" cy="7.5" r="5"/><path d="M11.2 11.2 16 16"/></svg></button>
+  <button data-tool="grid" title="Grid" aria-label="Grid"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="15" height="15"/><path d="M6.5 1.5v15M11.5 1.5v15M1.5 6.5h15M1.5 11.5h15"/></svg></button>
+</div>
+<div class="tool ruler" id="tRuler"><span class="deg" id="tDeg">0.0°</span><span class="rot" id="tRot" title="Turn"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M10 6a4 4 0 1 1-1.2-2.85"/><path d="M9 1v2.4H6.6"/></svg></span></div>
+<div class="tool level" id="tLevel"><div class="tube"><i class="bub" id="tBub"></i></div></div>
+<div class="tool lens" id="tLens"><div class="lens-in" id="tLensIn"></div></div>
 <div class="endbar on" id="endbar"><button id="btnDone">I’m done</button><button id="btnGiveUp">I give up</button></div>
 <div class="zoomer" aria-label="Zoom">
   <button id="zin" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 2v10M2 7h10"/></svg></button>
@@ -397,7 +444,7 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 <main class="stage">
   <div class="frame">
     <i class="mark a"></i><i class="mark b"></i><i class="mark c"></i><i class="mark d"></i>
-    <div class="view" id="view"><div id="grid" aria-label="Correction field"></div></div>
+    <div class="view" id="view"><div id="grid" aria-label="Correction field"></div><div class="guide" id="tGuide"></div></div>
   </div>
 </main>
 
@@ -1138,6 +1185,138 @@ function askBackground() {
   state.tiles.forEach((t, i) => t.update(flaw(e[i], tol)));   // the board goes back to how it was
 }
 
+/* ======================================================
+   Tools. A ruler, a spirit level, a magnifier, a grid.
+   They really help — and every time you pick one up, that is one more check.
+   The archive keeps how often each was reached for, and for how long.
+   ====================================================== */
+const Tools = (() => {
+  const names = ['ruler', 'level', 'lens', 'grid'];
+  const el = { ruler: $('tRuler'), level: $('tLevel'), lens: $('tLens'), grid: $('tGuide') };
+  const pos = { ruler: null, level: null, lens: null };
+  const open = {}, since = {};
+  let ang = 0, bubX = 0, bubV = 0, lensTimer = 0, raf = 0;
+  ARCH.tools = Object.fromEntries(names.map(n => [n, { n: 0, t: 0 }]));
+  const usable = () => !state.locked && !state.ended && !state.ritual;
+  const use = n => { ARCH.tools[n].n++; lastAny = performance.now(); };
+
+  function place(n) {
+    const p = pos[n]; if (!p) return;
+    el[n].style.transform = `translate(${p.x}px, ${p.y}px)` + (n === 'ruler' ? ` rotate(${ang}deg)` : '');
+    if (n === 'lens') lensMove();
+  }
+  function defaults(n) {
+    const W = innerWidth, H = innerHeight;
+    return { ruler: { x: W * .5, y: H * .42 }, level: { x: W * .36, y: H * .62 }, lens: { x: W * .64, y: H * .58 } }[n];
+  }
+  function toggle(n, force) {
+    const on = force !== undefined ? force : !open[n];
+    if (on === !!open[n]) return;
+    if (on && !usable()) return;
+    open[n] = on;
+    document.querySelector(`.tray [data-tool="${n}"]`).classList.toggle('on', on);
+    el[n].classList.toggle('on', on);
+    if (on) {
+      since[n] = performance.now(); use(n);
+      if (n !== 'grid') { if (!pos[n]) pos[n] = defaults(n); place(n); }
+      if (n === 'grid') gridSize();
+      if (n === 'lens') { lensClone(); lensTimer = setInterval(lensClone, 450); }
+    } else {
+      ARCH.tools[n].t += (performance.now() - since[n]) / 1000;
+      if (n === 'lens') clearInterval(lensTimer);
+    }
+    if (open.level && !raf) raf = requestAnimationFrame(levelTick);
+  }
+  function off() { names.forEach(n => toggle(n, false)); }
+  function summary() {        // what goes to the archive: [times picked up or moved, seconds out]
+    const out = {};
+    names.forEach(n => { const t = ARCH.tools[n].t + (open[n] ? (performance.now() - since[n]) / 1000 : 0); out[n] = [ARCH.tools[n].n, Math.round(t)]; });
+    return out;
+  }
+
+  document.querySelectorAll('.tray button').forEach(b => b.addEventListener('click', () => toggle(b.dataset.tool)));
+
+  /* dragging any of the three */
+  ['ruler', 'level', 'lens'].forEach(n => {
+    const t = el[n];
+    t.addEventListener('pointerdown', ev => {
+      if (!usable() || ev.target.closest('.rot')) return;
+      ev.preventDefault(); ev.stopPropagation();
+      t.setPointerCapture(ev.pointerId); t.classList.add('dragging'); use(n);
+      const ox = ev.clientX - pos[n].x, oy = ev.clientY - pos[n].y;
+      const move = e => { pos[n] = { x: e.clientX - ox, y: e.clientY - oy }; place(n); };
+      const up = () => { t.classList.remove('dragging'); t.removeEventListener('pointermove', move); t.removeEventListener('pointerup', up); t.removeEventListener('pointercancel', up); };
+      t.addEventListener('pointermove', move); t.addEventListener('pointerup', up); t.addEventListener('pointercancel', up);
+    });
+    t.addEventListener('wheel', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      if (n !== 'ruler' || !usable()) return;
+      ang += Math.sign(ev.deltaY) * (ev.shiftKey ? .1 : .5); setAng(ang);
+    }, { passive: false });
+  });
+
+  /* the ruler turns: scroll on it, or drag the round handle. Double-click puts it back to level. */
+  function setAng(a) { ang = ((a + 90) % 180 + 180) % 180 - 90; $('tDeg').textContent = `${ang.toFixed(1)}°`; place('ruler'); }
+  $('tRot').addEventListener('pointerdown', ev => {
+    if (!usable()) return;
+    ev.preventDefault(); ev.stopPropagation(); use('ruler');
+    const h = $('tRot'); h.setPointerCapture(ev.pointerId);
+    const a0 = Math.atan2(ev.clientY - pos.ruler.y, ev.clientX - pos.ruler.x) * 180 / Math.PI, g0 = ang;
+    const move = e => setAng(g0 + Math.atan2(e.clientY - pos.ruler.y, e.clientX - pos.ruler.x) * 180 / Math.PI - a0);
+    const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); };
+    h.addEventListener('pointermove', move); h.addEventListener('pointerup', up);
+  });
+  el.ruler.addEventListener('dblclick', () => { if (usable()) { use('ruler'); setAng(0); } });
+
+  /* the level reads the shape under it — honestly, with a bubble that never quite stops */
+  function tileUnder(x, y) {
+    for (const e of document.elementsFromPoint(x, y)) { const t = e.closest && e.closest('.tile'); if (t) return state.tiles.findIndex(k => k.el === t); }
+    return -1;
+  }
+  function levelTick(now) {
+    raf = 0;
+    if (!open.level) return;
+    const i = pos.level ? tileUnder(pos.level.x, pos.level.y) : -1;
+    let target = 0;
+    if (i >= 0) { const e = computeErrors(); target = flaw(e[i], LV().tol); }
+    else target = Math.sin(now / 900) * .15;
+    const tube = 136 - 16;   // how far the bubble can go each way, in px, is half of this
+    const goal = target * tube / 2 + Math.sin(now / 370) * .45 + Math.sin(now / 1130) * .35;   // a little sway, always
+    bubV = bubV * .82 + (goal - bubX) * .06; bubX += bubV;
+    $('tBub').style.transform = `translateX(${bubX.toFixed(2)}px)`;
+    raf = requestAnimationFrame(levelTick);
+  }
+
+  /* the magnifier: a copy of the board, enlarged under the glass */
+  const K = 2.6;
+  function lensClone() {
+    const inner = $('tLensIn'), f = document.querySelector('.stage .frame');
+    const c = f.cloneNode(true); c.removeAttribute('id');
+    c.querySelectorAll('[id]').forEach(x => x.removeAttribute('id'));
+    c.querySelectorAll('.guide').forEach(g => g.classList.toggle('on', !!open.grid));
+    const r = f.getBoundingClientRect();
+    c.style.left = r.left + 'px'; c.style.top = r.top + 'px';
+    const v = c.querySelector('.view > div'); if (v) { v.style.position = 'absolute'; v.style.inset = '0'; v.style.display = 'grid'; }
+    inner.replaceChildren(c);
+    lensMove();
+  }
+  function lensMove() {
+    const p = pos.lens; if (!p) return;
+    const R = 105, inner = $('tLensIn');
+    inner.style.transformOrigin = `${p.x}px ${p.y}px`;
+    inner.style.transform = `translate(${R - p.x}px, ${R - p.y}px) scale(${K})`;
+  }
+
+  /* the grid: a line through the middle of every shape, and finer ones either side */
+  function gridSize() {
+    const { c, r } = LV(), g = $('tGuide');
+    g.style.setProperty('--gw', `${100 / c}%`); g.style.setProperty('--gh', `${100 / r}%`);
+  }
+  addEventListener('resize', () => { if (open.grid) gridSize(); if (open.lens) lensClone(); });
+
+  return { toggle, off, summary, open: () => ({ ...open }) };
+})();
+
 /* the clock: how long you have been in front of the board (it stops when you do) */
 const mmss = sec => { sec = Math.max(0, Math.floor(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, x = sec % 60, p = n => String(n).padStart(2, '0'); return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`; };
 const onBoard = () => ARCH.shownAt ? ((ARCH.endedAt || performance.now()) - ARCH.shownAt) / 1000 : 0;
@@ -1161,6 +1340,7 @@ function ending() {
   state.locked = true;
   ARCH.endedAt = performance.now();
   clock();
+  Tools.off(); document.body.classList.add('ended');
   if (!ARCH.end) ARCH.end = 'idle';
   $('endbar').classList.remove('on');
   clearTimeout(ritualTimer);
@@ -1213,7 +1393,7 @@ const Remote = (() => {
   function send(rec) {
     const row = { at: rec.at, name: rec.name, ocd: rec.ocd, dur: rec.dur, corr: rec.corr, left: rec.left, chk: rec.chk,
       lv: JSON.stringify(rec.lv), fixes: JSON.stringify(rec.fixes), tl: JSON.stringify(rec.tl.map(v => +v.toFixed(2))),
-      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end, total: rec.total, wait: rec.wait }) };
+      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end, total: rec.total, wait: rec.wait, tools: rec.tools }) };
     // text/plain keeps the browser from asking permission first; the script reads it as JSON
     fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) }).catch(() => {});
   }
@@ -1233,6 +1413,12 @@ const Archive = (() => {
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const median = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : 0; };
   const fmtDur = s => s < 60 ? `${s} sec` : `${Math.round(s / 60)} min`;
+  const toolText = r => {
+    if (!r.tools) return '';
+    const nm = { ruler: 'ruler', level: 'level', lens: 'magnifier', grid: 'grid' };
+    const used = Object.keys(nm).filter(k => r.tools[k] && r.tools[k][0] > 0);
+    return used.length ? 'Reached for ' + used.map(k => `the ${nm[k]} ${r.tools[k][0]}×`).join(' · ') : 'Used no tools';
+  };
   const timeText = r => `${mmss(r.total || r.dur)} on the board${typeof r.wait === 'number' ? ` · first touch after ${mmss(r.wait)}` : ''} · ${r.corr.toLocaleString('en')} corrections`;
   const fmtAt = t => { const d = new Date(t); return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   let filt = 'all', mine = null, list = [], cols = 1, occ = new Map(), bounds = null, play = null, sprites = null, cv, ctx, dpr = 1, V = { x: 0, y: 0, z: 1 }, anim = null, cur = -1, hover = -1, raf = 0, wired = false;
@@ -1287,7 +1473,9 @@ const Archive = (() => {
       const u = R(), ocd = u < .18 ? 'yes' : u < .4 ? 'maybe' : u < .85 ? 'no' : 'skip';   // demo answers are random: they say nothing about anyone
       const ue = R(), end = ue < .45 ? 'done' : ue < .85 ? 'gave_up' : 'idle';
       const wait = 2 + (dur * 37 + p * 11) % 19;   // a few seconds of looking before the first touch (no extra chance drawn, so the demo crowd stays the same)
-      d.push({ demo: true, ocd, end, wait, total: dur + wait, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
+      const lean = { yes: 1, maybe: .6, no: .2, skip: .45 }[ocd], hsh = k => ((p + 1) * 2654435761 + k * 40503) % 1000 / 1000, long = Math.min(1, dur / 400);
+      const tools = Object.fromEntries(['ruler', 'level', 'lens', 'grid'].map((k, j) => { const n = hsh(j) < lean * .8 ? Math.round(1 + hsh(j + 7) * 14 * lean * long * [1, .9, .6, .3][j]) : 0; return [k, [n, Math.round(n * (4 + hsh(j + 3) * 20))]]; }));
+      d.push({ demo: true, ocd, end, wait, total: dur + wait, tools, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
     }
     return d;
   }
@@ -1298,6 +1486,7 @@ const Archive = (() => {
       at: Date.now(), dur: Math.max(1, Math.floor((performance.now() - state.t0) / 1000)), corr: state.corrections,
       lv: state.tiles.map((t, i) => qz(flaw(e[i], tol))), fixes: state.tiles.map(t => t.fixes), tl: ARCH.timeline.slice(), last: ARCH.lastNote,
       ocd: state.ocd || 'skip', name: ARCH.name || '', end: ARCH.end || 'idle',
+      tools: Tools.summary(),                                                                            // [times picked up or moved, seconds out] per tool
       total: Math.max(1, Math.floor(onBoard())),                                                       // the timer, when it stopped
       wait: state.started && ARCH.shownAt ? +Math.max(0, (state.t0 - ARCH.shownAt) / 1000).toFixed(1) : null,   // seconds before the first touch
       start: ARCH.start, ev: ARCH.events.slice(0, 2000), th: ARCH.touches.slice(0, 1000)
@@ -1501,7 +1690,7 @@ const Archive = (() => {
     return (rec._chk = { n: Math.min(n, of), of });
   }
   async function startPlay(i) {
-    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.textContent = endText(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); } }
+    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.textContent = endText(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); } }
     if (cur !== i) return;
     const rec = list[i], s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : { start: rec.lv.slice(), ev: [], th: [] };
     play = { i, lv: s.start.slice(), ev: s.ev, th: s.th, k: 0, h: 0, t0: performance.now(), total: Math.min(15000, Math.max(6000, rec.dur * 25)), dur: rec.dur, flash: [], done: false };
@@ -1527,6 +1716,7 @@ const Archive = (() => {
       <div class="ap-when">${you ? 'just now' : fmtAt(rec.at)}${rec.demo ? ' · demo' : ''}${rec.name ? '' : ` · ${said}`}</div>
       <div class="ap-verdict"><span id="apEnd">${endText(rec)}</span> <b>${N - rec.left}</b> of ${N} were really straight.</div>
       <div class="ap-line-s" id="apTime">${timeText(rec)}</div>
+      <div class="ap-line-s ap-tools" id="apTools">${toolText(rec)}</div>
       <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
         <div class="ap-axis"><span>how much of it was right</span><button class="ap-again" id="apAgain">Watch again</button></div></div>
       ${(() => { const c = checks(rec, i); return c ? `<div class="ap-sec"><div class="arch-k">Fixing what wasn’t broken</div>
