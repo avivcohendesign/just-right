@@ -1478,7 +1478,7 @@ const Archive = (() => {
     if (wired) return; wired = true;
     const A = $('archive');
     let drag = null;
-    A.addEventListener('pointerdown', ev => { ev.stopPropagation(); cancelAnimationFrame(anim); drag = { x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, moved: false }; A.setPointerCapture(ev.pointerId); });
+    A.addEventListener('pointerdown', ev => { ev.stopPropagation(); if (mine && mine.landed) controls(); cancelAnimationFrame(anim); drag = { x: ev.clientX, y: ev.clientY, vx: V.x, vy: V.y, moved: false }; A.setPointerCapture(ev.pointerId); });
     A.addEventListener('pointermove', ev => {
       if (!drag) { const h = hit(ev.clientX, ev.clientY); if (h !== hover) { hover = h; A.style.cursor = h >= 0 ? 'pointer' : 'grab'; redraw(); } return; }
       const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
@@ -1560,7 +1560,8 @@ const Archive = (() => {
       stageEl.style.transition = 'opacity 500ms ease'; stageEl.style.opacity = 0;
       setTimeout(() => { stageEl.style.display = 'none'; }, 520);
       // and then you fall away from it, until it is one among hundreds
-      setTimeout(() => glide(fitAll(), 6500, () => { $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); }), 900);
+      setTimeout(() => glide(fitAll(), 6500, controls), 900);
+      setTimeout(controls, 900 + 6600);                      // even if someone grabs the wall while it's pulling back
     }, 1800);
   }
   async function show() {           // open the wall without the arrival (presenter key)
@@ -1570,6 +1571,7 @@ const Archive = (() => {
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
     ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); });
   }
+  function controls() { $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); }
   function hide() { $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
   return { save, show, hide, arrive, demos, levels };
 })();
