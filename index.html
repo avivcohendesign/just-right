@@ -444,7 +444,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 <div class="arch-view" id="archView"><button data-v="boards" class="sel" title="Boards" aria-label="Boards"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="5.5" height="4"/><rect x="9" y="2.5" width="5.5" height="4"/><rect x="1.5" y="9.5" width="5.5" height="4"/><rect x="9" y="9.5" width="5.5" height="4"/></svg></button><button data-v="hands" title="Lines" aria-label="Lines"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h10M2 6.3h13M7 9.6h8M4 12.9h11"/></svg></button></div>
 <div class="arch-stat" id="archStat"></div>
 <div class="arch-ocd" id="archOcd"><button data-f="all" class="sel">Everyone</button><button data-f="yes">OCD</button><button data-f="maybe">Don’t know</button><button data-f="no">No OCD</button><button data-f="skip">Rather not say</button></div>
-<div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
+<div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button></div>
 <aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
 
 <div class="tray" id="tray" aria-label="Tools">
@@ -1803,7 +1803,6 @@ const Archive = (() => {
     A.addEventListener('wheel', ev => { ev.preventDefault(); ev.stopPropagation(); if (ev.ctrlKey || (Math.abs(ev.deltaY) > Math.abs(ev.deltaX) && !ev.shiftKey)) zoomAt(ev.clientX, ev.clientY, Math.exp(-ev.deltaY * .0015)); else setView({ x: V.x - ev.deltaX, y: V.y - ev.deltaY, z: V.z }); }, { passive: false });
     $('azIn').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1.5);
     $('azOut').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1 / 1.5);
-    $('azAll').onclick = () => (cur >= 0 ? back() : glide(fitAll(), 1000));
     // compare by what people said about themselves
     $('archOcd').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
       filt = b.dataset.f;
