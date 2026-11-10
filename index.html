@@ -1361,7 +1361,7 @@ const Archive = (() => {
   let remote = [];
   function layout() {
     const past = MODE === 'live'
-      ? [...remote.filter(r => !(mine && r.at === mine.at)), ...demos(60)]               // the published site: real people, plus sixty demo visitors (marked "demo")
+      ? [...remote.filter(r => !(mine && r.at === mine.at)), ...demos(80)]               // the published site: real people, plus eighty demo visitors (marked "demo")
       : [...load().filter(r => r.lv && r.lv.length === N && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
     list = mine ? [mine, ...past] : past;
     const GW = Math.max(10, Math.min(54, Math.round(Math.sqrt(list.length) * 2.2))), GH = Math.max(6, Math.round(GW * CW / CH / (innerWidth / innerHeight)));
