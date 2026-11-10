@@ -339,9 +339,11 @@ body.peek.focus-panel .arch-home{display:none}
 .ask-name input:focus{border-bottom-color:var(--blue)}
 .ask-name input::placeholder{color:var(--mute);opacity:.6}
 /* the archive's second view: hands — each line a person, running into a shape they kept going back to */
-.arch-view{position:fixed;left:50%;top:28px;transform:translateX(-50%);z-index:33;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
+.arch-view{position:fixed;left:36px;top:28px;z-index:33;display:flex;flex-direction:column;gap:6px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
 .arch-view.on{opacity:1;pointer-events:auto}
-.arch-view button{font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);padding:9px 14px;color:var(--mute);cursor:pointer}
+.arch-view button{width:36px;height:36px;padding:0;display:grid;place-items:center;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);color:var(--mute);cursor:pointer}
+.arch-view button:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.arch-view svg{width:16px;height:16px}
 .arch-view button.sel{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:var(--tile)}
 body.focus-panel .arch-view{opacity:0;pointer-events:none}
 .hands{position:fixed;inset:0;z-index:30;background:var(--bg);opacity:0;pointer-events:none;transition:opacity 700ms ease}
@@ -438,7 +440,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 <div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas></div>
 <div class="hands-tip" id="handsTip"></div>
 <button class="arch-home" id="archHome">← Back to the game</button>
-<div class="arch-view" id="archView"><button data-v="boards" class="sel">Boards</button><button data-v="hands">Lines</button></div>
+<div class="arch-view" id="archView"><button data-v="boards" class="sel" title="Boards" aria-label="Boards"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="5.5" height="4"/><rect x="9" y="2.5" width="5.5" height="4"/><rect x="1.5" y="9.5" width="5.5" height="4"/><rect x="9" y="9.5" width="5.5" height="4"/></svg></button><button data-v="hands" title="Lines" aria-label="Lines"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h10M2 6.3h13M7 9.6h8M4 12.9h11"/></svg></button></div>
 <div class="arch-stat" id="archStat"></div>
 <div class="arch-ocd" id="archOcd"><button data-f="all" class="sel">Everyone</button><button data-f="yes">OCD</button><button data-f="maybe">Don’t know</button><button data-f="no">No OCD</button><button data-f="skip">Rather not say</button></div>
 <div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button><button id="azAll" aria-label="See all"><svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="4" height="4"/><rect x="8" y="2" width="4" height="4"/><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/></svg></button></div>
@@ -1905,7 +1907,7 @@ const Archive = (() => {
   }
   function hGeom() {
     const W = innerWidth, Hh = innerHeight, top = 100, bot = Hh - 140;
-    const xR = W - 40 - Math.min(170, W * .15), x0 = 40;
+    const xR = W - 40 - Math.min(170, W * .15), x0 = 96;   // clear of the view buttons on the left
     return { W, Hh, top, bot, xR, x0 };
   }
   function visible(l) { return filt === 'all' || l.r.ocd === filt; }
