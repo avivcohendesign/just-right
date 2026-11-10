@@ -1897,12 +1897,15 @@ const Archive = (() => {
     const ts = keep.map(l => Math.log(l.n)), lo = Math.min(...ts), hi = Math.max(...ts);
     keep.forEach((l, j) => { l.len = .1 + .9 * (ts[j] - lo) / (hi - lo || 1); });
     keep.sort((a, b) => a.i - b.i || b.len - a.len);
-    return { lines: keep, colors: Array.from({ length: N }, (_, i) => colorOf(i)), names: state.tiles.map(t => SHAPE_NAME[t.shape] || t.shape) };
+    const css = getComputedStyle(document.documentElement), PAL = ['blue', 'red', 'yellow', 'green', 'orange', 'violet', 'sky', 'pink', 'teal', 'crimson', 'lime', 'navy', 'coral', 'ochre', 'magenta'];
+    const pc = PAL.map(n => css.getPropertyValue('--' + n).trim()).filter(Boolean).sort((a, b) => a.length - b.length || 0);
+    const mix = []; for (let j = 0; j < 97; j++) mix.push(pc[(j * 7) % pc.length]);   // a spread of colours, never the same twice in a row
+    return { pc: mix, lines: keep, colors: Array.from({ length: N }, (_, i) => colorOf(i)), names: state.tiles.map(t => SHAPE_NAME[t.shape] || t.shape) };
   }
   function hGeom() {
     const W = innerWidth, Hh = innerHeight, top = 96, bot = Hh - 104;
     const row = (bot - top) / N;
-    const xLabel = W - 40 - Math.min(150, W * .14), xSw = xLabel - 22, xEnd = xSw, xBend = Math.max(180, W * .4), x0 = 40;
+    const xLabel = W - 40 - Math.min(150, W * .14), xSw = xLabel - 22, xEnd = xSw, xBend = Math.max(180, W * .5), x0 = 40;
     return { W, Hh, top, bot, row, xLabel, xSw, xEnd, xBend, x0 };
   }
   function visible(l) { return filt === 'all' || l.r.ocd === filt; }
@@ -1917,15 +1920,21 @@ const Archive = (() => {
     const lineH = (g.bot - g.top) / Math.max(1, L);
     const lw = Math.max(.8, Math.min(4, lineH * .62));
     const focusI = hHover ? hHover.i : -1;
-    c.lineCap = 'butt'; c.lineJoin = 'miter';
+    // each line is thin where it starts and widens as it nears its shape, until the lines going to one shape
+    // fill its whole row between them — the fan reads like a floor running away from you
+    const cnt = new Array(N).fill(0), seen = new Array(N).fill(0);
+    shown.forEach(l => { cnt[l.i]++; });
+    const mid = (g.top + g.bot) / 2, squeeze = .86;          // the thin ends sit a little closer together, toward the middle
     shown.forEach((l, j) => {
-      const yL = g.top + (j + .5) * lineH, yR = g.top + (l.i + .5) * g.row;
+      const yL = mid + (g.top + (j + .5) * lineH - mid) * squeeze;
+      const r0 = g.top + l.i * g.row, sl = g.row / cnt[l.i], y0 = r0 + seen[l.i] * sl, y1 = y0 + sl + .4; seen[l.i]++;
       const xs = g.xBend - l.len * (g.xBend - g.x0) * ease;
-      const dim = focusI >= 0 && l.i !== focusI;
+      const dim = focusI >= 0 && l.i !== focusI, hot = hHover && hHover.line === l;
+      const w = (hot ? Math.max(2.5, lw * 1.8) : lw) * squeeze;
       c.globalAlpha = dim ? .12 : 1;
-      c.strokeStyle = H.colors[l.i];
-      c.lineWidth = hHover && hHover.line === l ? Math.max(2.5, lw * 1.8) : lw;
-      c.beginPath(); c.moveTo(xs, yL); c.lineTo(g.xBend, yL); c.lineTo(g.xEnd, yR); c.stroke();
+      c.fillStyle = H.pc[l.k % H.pc.length];          // each person has a colour of their own, so the threads stay apart
+      c.fillRect(xs, yL - w / 2, g.xBend - xs + .5, w);
+      c.beginPath(); c.moveTo(g.xBend, yL - w / 2); c.lineTo(g.xEnd, y0); c.lineTo(g.xEnd, y1); c.lineTo(g.xBend, yL + w / 2); c.closePath(); c.fill();
       l._y = yL; l._x = xs;
     });
     // the sixty: a swatch of each shape's colour, and its name
@@ -1934,7 +1943,7 @@ const Archive = (() => {
     for (let i = 0; i < N; i++) {
       const y = g.top + (i + .5) * g.row, has = shown.some(l => l.i === i);
       c.globalAlpha = focusI >= 0 && focusI !== i ? .25 : has ? 1 : .35;
-      c.fillStyle = H.colors[i]; c.fillRect(g.xSw, y - g.row * .42, 12, g.row * .84);
+      c.fillStyle = H.colors[i]; c.fillRect(g.xSw, y - g.row / 2, 12, g.row + .4);
       c.fillStyle = '#6E6B64'; c.fillText(H.names[i], g.xLabel, y);
     }
     c.globalAlpha = 1;
