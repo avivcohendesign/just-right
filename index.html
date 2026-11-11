@@ -311,6 +311,15 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
 .ask{overflow:hidden}
+.ask.landing .ask-in{display:none}
+.ask-land{position:relative;z-index:1;display:none;flex-direction:column;align-items:center;opacity:0;animation:appear 1600ms 200ms ease forwards}
+.ask.landing .ask-land{display:flex}
+.ask-land.leaving{animation:none;opacity:0;transition:opacity 700ms ease}
+.wordmark{margin:0;font-weight:500;font-size:clamp(84px,15vw,220px);letter-spacing:.04em;line-height:1;color:var(--ink);display:flex;user-select:none;-webkit-user-select:none}
+.wordmark span{display:inline-block;transform-origin:50% 90%;transition:transform 900ms cubic-bezier(.3,.7,.2,1);cursor:default}
+.land-go{margin-top:56px;font:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;height:40px;padding:0 30px;border:0;background:var(--tile);color:var(--mute);cursor:pointer;transition:color 250ms}
+.land-go:hover,.land-go:focus-visible{color:var(--ink);outline:none}
+
 .ask-in{position:relative;z-index:1;max-width:560px;padding:0 24px;text-align:center;opacity:0;animation:appear 1400ms 300ms ease forwards}
 .ask-in::before{content:"";position:absolute;z-index:-1;left:50%;top:50%;width:150%;height:170%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,var(--bg) 55%,rgba(241,239,234,0));pointer-events:none}
 .ask-q{font-size:clamp(22px,2.6vw,32px);font-weight:500;letter-spacing:-.015em;line-height:1.15;text-wrap:balance}
@@ -427,7 +436,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 
 <!-- no on-screen next button; N still moves to the next board (for presenting) -->
 
-<div class="ask" id="ask"><div class="ask-bg" id="askBg" aria-hidden="true"></div><button class="ask-arch" id="askArch" title="See the archive" aria-label="See the archive"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="5.5" height="4"/><rect x="9" y="2.5" width="5.5" height="4"/><rect x="1.5" y="9.5" width="5.5" height="4"/><rect x="9" y="9.5" width="5.5" height="4"/></svg></button><div class="ask-in">
+<div class="ask landing" id="ask"><div class="ask-bg" id="askBg" aria-hidden="true"></div><button class="ask-arch" id="askArch" title="See the archive" aria-label="See the archive"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="5.5" height="4"/><rect x="9" y="2.5" width="5.5" height="4"/><rect x="1.5" y="9.5" width="5.5" height="4"/><rect x="9" y="9.5" width="5.5" height="4"/></svg></button><div class="ask-land" id="askLand"><h1 class="wordmark" id="wordmark" aria-label="Align"><span>A</span><span>L</span><span>I</span><span>G</span><span>N</span></h1><button class="land-go" id="landGo">Begin</button></div><div class="ask-in">
   <label class="ask-name"><span>Your name — if you want it on your board</span><input id="askName" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Leave empty to stay anonymous"></label>
   <div class="ask-q">Before you start — do you have OCD?</div>
   <div class="ask-b"><button data-a="yes">Yes, diagnosed</button><button data-a="maybe">I don’t know</button><button data-a="no">No</button><button data-a="skip">I’d rather not say</button></div>
@@ -1177,6 +1186,28 @@ function init() {
   $('btnGiveUp').addEventListener('click', leave('gave_up'));
   // first the question; the opening line only after it is answered
   const ask = $('ask');
+  /* the first page: the name, with one letter that won't stay straight. Straighten it and another goes. */
+  {
+    const L = [...$('wordmark').children];
+    let off = 3, busy = false;
+    const tilt = i => { const a = (Math.random() < .5 ? -1 : 1) * (2.5 + Math.random() * 2.5), y = (Math.random() - .5) * 6; L[i].style.transform = `translateY(${y.toFixed(1)}%) rotate(${a.toFixed(1)}deg)`; };
+    tilt(off);
+    L.forEach((el, i) => {
+      const fix = () => {
+        if (i !== off || busy) return;
+        busy = true; el.style.transform = 'none';
+        setTimeout(() => { let n; do { n = Math.floor(Math.random() * L.length); } while (n === off); off = n; tilt(off); busy = false; }, 900);
+      };
+      el.addEventListener('pointerenter', fix); el.addEventListener('pointerdown', fix);
+    });
+    const begin = () => {
+      if (!ask.classList.contains('landing')) return;
+      const land = $('askLand'); land.classList.add('leaving');
+      setTimeout(() => { ask.classList.remove('landing'); land.remove(); }, 700);
+    };
+    $('landGo').addEventListener('click', begin);
+    addEventListener('keydown', ev => { if (ev.key === 'Enter' && ask.classList.contains('landing') && !ask.classList.contains('peek')) begin(); });
+  }
   // straight to the archive from the first screen, and back again
   // (on the published site the archive has to be fetched first: the question stays up until it is ready, so the board never shows in between)
   $('askArch').addEventListener('click', async () => {
