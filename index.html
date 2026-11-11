@@ -1502,11 +1502,14 @@ const Archive = (() => {
     const now = Date.now(), d = [];
     for (let p = 0; p < count; p++) {
       const dur = Math.round(40 + Math.pow(R(), 1.7) * 1500), corr = Math.round(dur * rr(.3, 1.8));
-      // how many they left crooked, calibrated to how the board really behaves: the shapes pull on each
-      // other and drift back, so most people leave somewhere between thirty and sixty-five. Almost nobody gets below twenty.
-      const u0 = R(), stay = Math.min(1, Math.log(dur / 40) / Math.log(40));  // staying longer helps — a little
-      let L = (u0 < .08 ? rr(14, 30) : u0 < .9 ? rr(30, 65) - stay * 8 : rr(64, 70)) * N / 70;   // (calibrated on seventy shapes, scaled to the board)
-      L = Math.max(8, Math.min(N, Math.round(L)));
+      // how many they left crooked. The board starts a bit over half crooked, and the shapes pull on each other,
+      // so getting far takes time: someone who left after a minute leaves about as much as they found;
+      // only the ones who stayed long get it down to a third or less — and nobody gets it all.
+      const stay = Math.min(1, Math.log(dur / 40) / Math.log(40));           // 0 at forty seconds, 1 at twenty-five minutes
+      const gifted = stay > .45 && R() < .12 ? rr(.04, .12) : 0;              // a few of the patient ones get further
+      const stuck = stay > .3 && R() < .14 ? rr(.06, .16) : 0;                // and some stayed long and only went round in circles
+      let frac = .62 - .34 * Math.pow(stay, 1.15) - gifted + stuck + rr(-.08, .08);
+      let L = Math.max(Math.round(N * .12), Math.min(Math.round(N * .78), Math.round(frac * N)));
       // which ones: the hard few nearly always, the rest by chance
       const pool = hard.map((h, i) => [i, (h > .3 ? 6 : 1) * (.5 + R())]), lv = new Array(N).fill(STRAIGHT);
       for (let n = 0; n < L; n++) {
