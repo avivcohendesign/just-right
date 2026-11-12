@@ -1984,13 +1984,17 @@ const Archive = (() => {
       l._y = y; l._x = xs;
     });
     c.globalAlpha = 1;
-    // on the right: how much of the board was straight, every time the number changes enough to have room
-    const fs = 12; let lastY = -99;
-    c.font = `italic ${fs}px Georgia, "Times New Roman", serif`; c.textBaseline = 'middle'; c.fillStyle = '#6E6B64';
-    H.lines.forEach((l, j) => {
-      const y = g.top + (j + .5) * lineH;
-      if ((j === 0 || l.solved !== H.lines[j - 1].solved) && y - lastY > 16) { c.fillText(`${l.solved} of ${N} straight`, g.xR + 16, y); lastY = y; }
-    });
+    // on the right: a quiet scale — only every ten, in the site's own type, where the lines cross it
+    const font = getComputedStyle(document.body).fontFamily;
+    c.font = `10px ${font}`; c.textBaseline = 'middle'; c.fillStyle = '#8C8981'; c.textAlign = 'left';
+    c.fillText(`OF ${N} STRAIGHT`, g.xR + 16, g.top - 22);
+    const hiS = H.lines.length ? H.lines[0].solved : 0, loS = H.lines.length ? H.lines[H.lines.length - 1].solved : 0;
+    for (let t = Math.floor(hiS / 10) * 10; t >= Math.ceil(loS / 10) * 10 && t > 0; t -= 10) {
+      const j = H.lines.findIndex(l => l.solved <= t); if (j < 0) continue;
+      const y = g.top + j * lineH;
+      c.fillRect(g.xR + 4, y - .5, 6, 1);
+      c.fillText(String(t), g.xR + 16, y);
+    }
     // time, measured from the right edge leftwards
     const span = g.xR - g.x0, step = [60, 120, 300, 600, 900, 1800, 3600].find(v => H.tMax / v <= 8) || 3600, ty = g.bot + 14;
     c.font = `10px ${getComputedStyle(document.body).fontFamily}`; c.fillStyle = '#8C8981'; c.textAlign = 'center';
