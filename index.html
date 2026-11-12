@@ -309,6 +309,12 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 .ap-verdict{font-size:19px;line-height:1.35;letter-spacing:-.01em;margin-top:22px}
 .ap-verdict b{font-weight:500;color:var(--red)}
 .ap-verdict span:empty{display:none}
+/* how it ended: the two buttons from the game, the one they pressed filled in */
+.ap-end{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:22px}
+.ap-end .ap-btn{font-size:10px;letter-spacing:.16em;text-transform:uppercase;height:32px;padding:0 16px;display:inline-flex;align-items:center;background:var(--bg);color:var(--mute);opacity:.55}
+.ap-end .ap-btn.on{background:var(--ink);color:var(--tile);opacity:1}
+.ap-end i{font-style:normal;font-size:11px;color:var(--mute);letter-spacing:.02em}
+.ap-end + .ap-verdict{margin-top:14px}
 /* ---------- the question, before anything ---------- */
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
@@ -1492,6 +1498,7 @@ const Archive = (() => {
   const qz = f => { let b = 0; LEVEL.forEach((l, k) => { if (Math.abs(l - f) < Math.abs(LEVEL[b] - f)) b = k; }); return f && b === STRAIGHT ? (f > 0 ? 5 : 3) : b; };
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
   const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
+  const endChoice = r => !r.end ? '' : `<span class="ap-btn${r.end === 'done' ? ' on' : ''}">I’m done</span><span class="ap-btn${r.end === 'gave_up' ? ' on' : ''}">I give up</span>${r.end === 'idle' ? `<i>${r === mine ? 'You' : 'They'} pressed neither — ${r === mine ? 'you' : 'they'} stopped touching it.</i>` : ''}`;
   const endText = r => (r === mine ? { done: 'You said you were done.', gave_up: 'You gave up.', idle: 'You stopped touching it.' } : { done: 'Said they were done.', gave_up: 'Gave up.', idle: 'Stopped touching it.' })[r.end] || '';
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const median = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : 0; };
@@ -1776,7 +1783,7 @@ const Archive = (() => {
     return (rec._chk = { n: Math.min(n, of), of });
   }
   async function startPlay(i) {
-    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.textContent = endText(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); } }
+    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.innerHTML = endChoice(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); } }
     if (cur !== i) return;
     const rec = list[i], s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : { start: rec.lv.slice(), ev: [], th: [] };
     play = { i, lv: s.start.slice(), ev: s.ev, th: s.th, k: 0, h: 0, t0: performance.now(), total: Math.min(15000, Math.max(6000, rec.dur * 25)), dur: rec.dur, flash: [], done: false };
@@ -1800,7 +1807,8 @@ const Archive = (() => {
     P.innerHTML = `<div class="ap-top"><span class="arch-k">${i + 1} / ${list.length}</span><button class="ap-x" id="apX">Back · Esc</button></div>
       <div class="ap-who${you ? ' you' : ''}">${you ? 'You' : rec.name ? esc(rec.name) : `Visitor ${String(i + 1).padStart(3, '0')}`}</div>
       <div class="ap-when">${you ? 'just now' : fmtAt(rec.at)}${rec.demo ? ' · demo' : ''}${rec.name ? '' : ` · ${said}`}</div>
-      <div class="ap-verdict"><span id="apEnd">${endText(rec)}</span> <b>${N - rec.left}</b> of ${N} were really straight.</div>
+      <div class="ap-end" id="apEnd">${endChoice(rec)}</div>
+      <div class="ap-verdict"><b>${N - rec.left}</b> of ${N} were really straight.</div>
       <div class="ap-line-s" id="apTime">${timeText(rec)}</div>
       <div class="ap-line-s ap-tools" id="apTools">${toolText(rec)}</div>
       <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
