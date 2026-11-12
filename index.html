@@ -264,6 +264,8 @@ body.harmony .trk,body.harmony .thumb,body.harmony .ok{opacity:0}
 .endbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc((var(--B, 90px) - 30px) / 2);z-index:6;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity 1400ms ease}
 .endbar.on{opacity:1;pointer-events:auto}
 /* ---------- tools: help that is also one more way to check ---------- */
+/* the tools are off for now: tray and the archive's tools line are hidden; the code stays so they can come back */
+.tray,.ap-tools{display:none !important}
 .tray{position:fixed;right:96px;bottom:calc((var(--B, 90px) - 34px) / 2);z-index:6;display:flex;gap:6px}
 .tray button{width:34px;height:34px;padding:0;border:0;background:var(--tile);color:var(--mute);cursor:pointer;display:grid;place-items:center;transition:color 250ms}
 .tray button:hover,.tray button:focus-visible{color:var(--ink);outline:none}
