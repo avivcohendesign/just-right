@@ -315,10 +315,22 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 .ap-end .ap-btn.on{background:var(--ink);color:var(--tile);opacity:1}
 .ap-end i{font-style:normal;font-size:11px;color:var(--mute);letter-spacing:.02em}
 .ap-end + .ap-verdict{margin-top:14px}
+.ap-feel{font-size:15px;margin-top:6px;color:var(--ink)}
+.ap-feel:empty{display:none}
+.ap-feel b{font-weight:500}
 /* ---------- the question, before anything ---------- */
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
 .ask{overflow:hidden}
+/* after the game, before the archive: one question about how it feels */
+.feel{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(241,239,234,.88);opacity:0;pointer-events:none;transition:opacity 900ms ease}
+.feel.on{opacity:1;pointer-events:auto}
+.feel-in{text-align:center;padding:0 24px}
+.feel-q{font-size:clamp(22px,2.6vw,32px);font-weight:500;letter-spacing:-.015em;line-height:1.15;margin:0}
+.feel-b{display:flex;justify-content:center;gap:8px;margin-top:30px}
+.feel-b button{width:52px;height:52px;border:0;background:var(--tile);font:inherit;font-size:17px;color:var(--ink);cursor:pointer;transition:background 200ms,color 200ms}
+.feel-b button:hover,.feel-b button:focus-visible{background:var(--ink);color:var(--tile);outline:none}
+.feel-l{display:flex;justify-content:space-between;width:300px;margin:12px auto 0;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 .ask.landing .ask-in{display:none}
 .ask-land{position:relative;z-index:1;display:none;flex-direction:column;align-items:center;opacity:0;animation:appear 1600ms 200ms ease forwards}
 .ask.landing .ask-land{display:flex}
@@ -479,6 +491,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 <div class="tool ruler" id="tRuler"><span class="deg" id="tDeg">0.0°</span><span class="rot" id="tRot" title="Turn"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1"><path d="M10 6a4 4 0 1 1-1.2-2.85"/><path d="M9 1v2.4H6.6"/></svg></span></div>
 <div class="tool level" id="tLevel"><div class="tube"><i class="bub" id="tBub"></i></div></div>
 <div class="tool lens" id="tLens"><div class="lens-in" id="tLensIn"></div></div>
+<div class="feel" id="feel" aria-live="polite"><div class="feel-in"><p class="feel-q">How right does it feel now?</p><div class="feel-b"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button></div><div class="feel-l"><span>Not at all</span><span>Just right</span></div></div></div>
 <div class="endbar on" id="endbar"><button id="btnDone">I’m done</button><button id="btnGiveUp">I give up</button></div>
 <div class="zoomer" aria-label="Zoom">
   <button id="zin" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M7 2v10M2 7h10"/></svg></button>
@@ -1441,7 +1454,13 @@ function ending() {
   Voice.hush();
   Sound.silence(2.5);
   document.querySelectorAll('.note').forEach(n => n.remove());
-  Archive.arrive();                    // no words: your board shrinks, and goes in among everyone else's
+  // one question before it goes: how right does it feel? (the archive has what the board was; only they know how it felt)
+  const box = $('feel'); let gone = false;
+  const go2 = v => { if (gone) return; gone = true; ARCH.feel = v; box.classList.remove('on'); setTimeout(() => Archive.arrive(), 700); };
+  box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => go2(+b.dataset.v)));
+  addEventListener('keydown', ev => { if (!gone && /^[1-5]$/.test(ev.key)) go2(+ev.key); });
+  setTimeout(() => box.classList.add('on'), 600);
+  setTimeout(() => go2(null), ARCH.end === 'idle' ? 30000 : 120000);   // if nobody is there to answer, it goes on without the answer
 }
 setInterval(() => {
   if (state.started && !state.ended && performance.now() - lastAny > IDLE_END_MS) ending();
@@ -1482,7 +1501,7 @@ const Remote = (() => {
   function send(rec) {
     const row = { at: rec.at, name: rec.name, ocd: rec.ocd, dur: rec.dur, corr: rec.corr, left: rec.left, chk: rec.chk,
       lv: JSON.stringify(rec.lv), fixes: JSON.stringify(rec.fixes), tl: JSON.stringify(rec.tl.map(v => +v.toFixed(2))),
-      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end, total: rec.total, wait: rec.wait, tools: rec.tools }) };
+      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end, total: rec.total, wait: rec.wait, tools: rec.tools, feel: rec.feel }) };
     // text/plain keeps the browser from asking permission first; the script reads it as JSON
     fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) }).catch(() => {});
   }
@@ -1498,6 +1517,7 @@ const Archive = (() => {
   const qz = f => { let b = 0; LEVEL.forEach((l, k) => { if (Math.abs(l - f) < Math.abs(LEVEL[b] - f)) b = k; }); return f && b === STRAIGHT ? (f > 0 ? 5 : 3) : b; };
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
   const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
+  const feelText = r => typeof r.feel === 'number' ? `${r === mine ? 'To you it felt' : 'To them it felt'} <b>${r.feel}</b> of 5 right.` : '';
   const endChoice = r => !r.end ? '' : `<span class="ap-btn${r.end === 'done' ? ' on' : ''}">I’m done</span><span class="ap-btn${r.end === 'gave_up' ? ' on' : ''}">I give up</span>${r.end === 'idle' ? `<i>${r === mine ? 'You' : 'They'} pressed neither — ${r === mine ? 'you' : 'they'} stopped touching it.</i>` : ''}`;
   const endText = r => (r === mine ? { done: 'You said you were done.', gave_up: 'You gave up.', idle: 'You stopped touching it.' } : { done: 'Said they were done.', gave_up: 'Gave up.', idle: 'Stopped touching it.' })[r.end] || '';
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1568,7 +1588,9 @@ const Archive = (() => {
       const wait = 2 + (dur * 37 + p * 11) % 19;   // a few seconds of looking before the first touch (no extra chance drawn, so the demo crowd stays the same)
       const lean = { yes: 1, maybe: .6, no: .2, skip: .45 }[ocd], hsh = k => ((p + 1) * 2654435761 + k * 40503) % 1000 / 1000, long = Math.min(1, dur / 400);
       const tools = Object.fromEntries(['ruler', 'level', 'lens', 'grid'].map((k, j) => { const n = hsh(j) < lean * .8 ? Math.round(1 + hsh(j + 7) * 14 * lean * long * [1, .9, .6, .3][j]) : 0; return [k, [n, Math.round(n * (4 + hsh(j + 3) * 20))]]; }));
-      d.push({ demo: true, ocd, end, wait, total: dur + wait, tools, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
+      // how right it felt (a guess for the demo crowd: more straight feels a little better; saying yes to OCD, a little worse)
+      const feel = Math.max(1, Math.min(5, Math.round(1 + 4 * ((N - L) / N - .3) / .55 - (ocd === 'yes' ? 1 : ocd === 'maybe' ? .4 : 0) + (hsh(11) - .5) * 1.6)));
+      d.push({ demo: true, ocd, end, wait, feel, total: dur + wait, tools, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
     }
     return d;
   }
@@ -1578,7 +1600,7 @@ const Archive = (() => {
     mine = {
       at: Date.now(), dur: Math.max(1, Math.floor((performance.now() - state.t0) / 1000)), corr: state.corrections,
       lv: state.tiles.map((t, i) => qz(flaw(e[i], tol))), fixes: state.tiles.map(t => t.fixes), tl: ARCH.timeline.slice(), last: ARCH.lastNote,
-      ocd: state.ocd || 'skip', name: ARCH.name || '', end: ARCH.end || 'idle',
+      ocd: state.ocd || 'skip', name: ARCH.name || '', end: ARCH.end || 'idle', feel: ARCH.feel || null,   // how right it felt, 1–5, their own answer
       tools: Tools.summary(),                                                                            // [times picked up or moved, seconds out] per tool
       total: Math.max(1, Math.floor(onBoard())),                                                       // the timer, when it stopped
       wait: state.started && ARCH.shownAt ? +Math.max(0, (state.t0 - ARCH.shownAt) / 1000).toFixed(1) : null,   // seconds before the first touch
@@ -1783,7 +1805,7 @@ const Archive = (() => {
     return (rec._chk = { n: Math.min(n, of), of });
   }
   async function startPlay(i) {
-    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.innerHTML = endChoice(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); } }
+    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.innerHTML = endChoice(list[i]); const fe = $('apFeel'); if (fe && cur === i) fe.innerHTML = feelText(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); } }
     if (cur !== i) return;
     const rec = list[i], s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : { start: rec.lv.slice(), ev: [], th: [] };
     play = { i, lv: s.start.slice(), ev: s.ev, th: s.th, k: 0, h: 0, t0: performance.now(), total: Math.min(15000, Math.max(6000, rec.dur * 25)), dur: rec.dur, flash: [], done: false };
@@ -1809,6 +1831,7 @@ const Archive = (() => {
       <div class="ap-when">${you ? 'just now' : fmtAt(rec.at)}${rec.demo ? ' · demo' : ''}${rec.name ? '' : ` · ${said}`}</div>
       <div class="ap-end" id="apEnd">${endChoice(rec)}</div>
       <div class="ap-verdict"><b>${N - rec.left}</b> of ${N} were really straight.</div>
+      <div class="ap-feel" id="apFeel">${feelText(rec)}</div>
       <div class="ap-line-s" id="apTime">${timeText(rec)}</div>
       <div class="ap-line-s ap-tools" id="apTools">${toolText(rec)}</div>
       <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
