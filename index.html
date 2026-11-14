@@ -1584,7 +1584,7 @@ const Archive = (() => {
       // DEMO ONLY — shaped on purpose to show the project's hypothesis, not a finding: the ones who say they have OCD
       // get the furthest and feel worst about it; the ones who say they don't feel fine and get less far; the rest in between
       const u = R(), ocd = u < .18 ? 'yes' : u < .4 ? 'maybe' : u < .85 ? 'no' : 'skip';
-      const skill = { yes: .16, maybe: .06, skip: .03, no: -.05 }[ocd];
+      const skill = { yes: .07, maybe: .03, skip: .01, no: -.02 }[ocd];   // a lean, not a rule: the groups overlap a lot
       let frac = .98 - .56 * Math.pow(stay, 1.3) - skill * (.4 + stay) - gifted + stuck + rr(-.05, .05);
       let L = Math.max(Math.round(N * .3), Math.min(N, Math.round(frac * N)));
       // which ones: the hard few nearly always, the rest by chance
@@ -1606,10 +1606,9 @@ const Archive = (() => {
       const tools = Object.fromEntries(['ruler', 'level', 'lens', 'grid'].map((k, j) => { const n = hsh(j) < lean * .8 ? Math.round(1 + hsh(j + 7) * 14 * lean * long * [1, .9, .6, .3][j]) : 0; return [k, [n, Math.round(n * (4 + hsh(j + 3) * 20))]]; }));
       // how right it felt (a guess for the demo crowd: more straight feels a little better; saying yes to OCD, a little worse)
       const was = (N - L) / N, nz = hsh(11) - .5;
+      const nz2 = ((p + 3) * 2246822519 % 1000) / 1000 - .5;  // a second, independent wobble
       const feel = Math.max(1, Math.min(5, Math.round(
-        ocd === 'yes' ? 1.4 + was * 1.2 + nz * 1.4 :            // did well, felt it wasn't
-        ocd === 'no' ? 3.9 + was * 1.2 + nz * 1.4 :             // felt fine, whatever it was
-        2.3 + was * 2.6 + nz * 1.6)));                          // the rest: somewhere in between
+        1.9 + was * 3 + { yes: -.75, maybe: -.2, skip: 0, no: .45 }[ocd] + (nz + nz2) * 1.7)));   // more straight feels a bit better; the answer leans it
       d.push({ demo: true, ocd, end, wait, feel, total: dur + wait, tools, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
     }
     return d;
@@ -1784,8 +1783,8 @@ const Archive = (() => {
     const grp = k => { const g = rs.filter(r => r.ocd === k); if (g.length < 3) return null; const m = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)]; return { was: m(g.map(r => (N - r.left) / N)), feel: m(g.map(r => r.feel)), n: g.length }; };
     const Y = grp('yes'), O = ['no', 'maybe', 'skip'].map(grp).filter(Boolean);
     if (Y && O.length && O.every(o => Y.was > o.was && Y.feel < o.feel)) {
-      h = 'The ones who did best felt they did worst.';
-      sub = `People who said they have OCD left the straightest boards — ${Math.round(Y.was * N)} of ${N} — and felt ${Y.feel} of 5 right about them.`;
+      h = 'On the whole, the ones who did best felt they did worst.';
+      sub = `People who said they have OCD tended to leave the straightest boards (${Math.round(Y.was * N)} of ${N}, typically) — and to feel the least right about them (${Y.feel} of 5).`;
     }
     el.innerHTML = `<h2>${h}</h2><p>${sub}</p>`;
   }
