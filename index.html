@@ -2068,7 +2068,7 @@ const Archive = (() => {
       stageEl.style.transition = 'opacity 500ms ease'; stageEl.style.opacity = 0;
       setTimeout(() => { stageEl.style.display = 'none'; }, 520);
       // and then you fall away from it, until it is one among hundreds
-      setTimeout(() => glide(fitAll(), 6500, controls), 900);
+      setTimeout(() => { glide(fitAll(), 6500, controls); setTimeout(() => document.body.classList.add('arch-on'), 2200); }, 900);   // the two lines about you come in as you pull away
       setTimeout(controls, 900 + 6600);                      // even if someone grabs the wall while it's pulling back
     }, 1800);
   }
@@ -2198,7 +2198,7 @@ const Archive = (() => {
     el.addEventListener('click', () => { if (hHover && hHover.line) { const k = hHover.line.k; setMode('boards'); setTimeout(() => enter(k), 60); } });
     addEventListener('resize', () => { if (view === 'hands') { hSize(); hRedraw(); } });
   }
-  function controls() { if (view !== 'hands') $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); }
+  function controls() { if (view !== 'hands') $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); document.body.classList.add('arch-on'); }
   function hide() { setMode('boards'); document.body.classList.remove('arch-on'); $('archView').classList.remove('on'); $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
   return { save, show, hide, arrive, demos, levels };
 })();
