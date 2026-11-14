@@ -1581,7 +1581,11 @@ const Archive = (() => {
       const stuck = stay > .3 && R() < .14 ? rr(.06, .16) : 0;                // and some stayed long and only went round in circles
       // calibrated on the real games: almost nothing is truly straight at the start, a minute and a half gets
       // someone to about eight of eighty-four, and only the ones who stay very long get past half
-      let frac = .98 - .56 * Math.pow(stay, 1.3) - gifted + stuck + rr(-.05, .05);
+      // DEMO ONLY — shaped on purpose to show the project's hypothesis, not a finding: the ones who say they have OCD
+      // get the furthest and feel worst about it; the ones who say they don't feel fine and get less far; the rest in between
+      const u = R(), ocd = u < .18 ? 'yes' : u < .4 ? 'maybe' : u < .85 ? 'no' : 'skip';
+      const skill = { yes: .16, maybe: .06, skip: .03, no: -.05 }[ocd];
+      let frac = .98 - .56 * Math.pow(stay, 1.3) - skill * (.4 + stay) - gifted + stuck + rr(-.05, .05);
       let L = Math.max(Math.round(N * .3), Math.min(N, Math.round(frac * N)));
       // which ones: the hard few nearly always, the rest by chance
       const pool = hard.map((h, i) => [i, (h > .3 ? 6 : 1) * (.5 + R())]), lv = new Array(N).fill(STRAIGHT);
@@ -1596,13 +1600,16 @@ const Archive = (() => {
       const tl = []; let v = 0; const steps = Math.max(2, Math.round(dur / 5));
       for (let k = 0; k < steps; k++) { v += rr(0, .06) * (ceil - v); if (R() < .07) v -= rr(.05, .25); v = Math.max(0, Math.min(ceil, v)); tl.push(+v.toFixed(2)); }
       tl[tl.length - 1] = +endV.toFixed(2);
-      const u = R(), ocd = u < .18 ? 'yes' : u < .4 ? 'maybe' : u < .85 ? 'no' : 'skip';   // demo answers are random: they say nothing about anyone
       const ue = R(), end = ue < .45 ? 'done' : ue < .85 ? 'gave_up' : 'idle';
       const wait = 2 + (dur * 37 + p * 11) % 19;   // a few seconds of looking before the first touch (no extra chance drawn, so the demo crowd stays the same)
       const lean = { yes: 1, maybe: .6, no: .2, skip: .45 }[ocd], hsh = k => ((p + 1) * 2654435761 + k * 40503) % 1000 / 1000, long = Math.min(1, dur / 400);
       const tools = Object.fromEntries(['ruler', 'level', 'lens', 'grid'].map((k, j) => { const n = hsh(j) < lean * .8 ? Math.round(1 + hsh(j + 7) * 14 * lean * long * [1, .9, .6, .3][j]) : 0; return [k, [n, Math.round(n * (4 + hsh(j + 3) * 20))]]; }));
       // how right it felt (a guess for the demo crowd: more straight feels a little better; saying yes to OCD, a little worse)
-      const feel = Math.max(1, Math.min(5, Math.round(1.3 + 3.6 * ((N - L) / N) / .6 - (ocd === 'yes' ? 1 : ocd === 'maybe' ? .4 : 0) + (hsh(11) - .5) * 1.6)));
+      const was = (N - L) / N, nz = hsh(11) - .5;
+      const feel = Math.max(1, Math.min(5, Math.round(
+        ocd === 'yes' ? 1.4 + was * 1.2 + nz * 1.4 :            // did well, felt it wasn't
+        ocd === 'no' ? 3.9 + was * 1.2 + nz * 1.4 :             // felt fine, whatever it was
+        2.3 + was * 2.6 + nz * 1.6)));                          // the rest: somewhere in between
       d.push({ demo: true, ocd, end, wait, feel, total: dur + wait, tools, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
     }
     return d;
@@ -1771,8 +1778,15 @@ const Archive = (() => {
     if (rs.length < 3) { el.innerHTML = ''; return; }
     let better = 0, worse = 0;
     rs.forEach(r => { const was = (N - r.left) / N, felt = (r.feel - 1) / 4; if (was > felt + .02) better++; else if (felt > was + .02) worse++; });
-    const h = better >= rs.length / 2 ? 'It was better than it felt.' : worse >= rs.length / 2 ? 'It felt better than it was.' : 'Mostly, it felt the way it was.';
-    const sub = better >= worse ? `For ${better} of ${rs.length} people, the board was straighter than it felt.` : `For ${worse} of ${rs.length} people, it felt straighter than it was.`;
+    let h = better >= rs.length / 2 ? 'It was better than it felt.' : worse >= rs.length / 2 ? 'It felt better than it was.' : 'Mostly, it felt the way it was.';
+    let sub = better >= worse ? `For ${better} of ${rs.length} people, the board was straighter than it felt.` : `For ${worse} of ${rs.length} people, it felt straighter than it was.`;
+    // and if the ones who said they have OCD left the straightest boards and felt the least right about them, that is the sentence
+    const grp = k => { const g = rs.filter(r => r.ocd === k); if (g.length < 3) return null; const m = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)]; return { was: m(g.map(r => (N - r.left) / N)), feel: m(g.map(r => r.feel)), n: g.length }; };
+    const Y = grp('yes'), O = ['no', 'maybe', 'skip'].map(grp).filter(Boolean);
+    if (Y && O.length && O.every(o => Y.was > o.was && Y.feel < o.feel)) {
+      h = 'The ones who did best felt they did worst.';
+      sub = `People who said they have OCD left the straightest boards — ${Math.round(Y.was * N)} of ${N} — and felt ${Y.feel} of 5 right about them.`;
+    }
     el.innerHTML = `<h2>${h}</h2><p>${sub}</p>`;
   }
   /* the frame around the wall: one band per answer, the line where feeling and fact agree, and the two scales */
