@@ -355,7 +355,11 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 .ask-b button{font:inherit;font-size:13px;background:var(--tile);border:0;padding:12px 16px;color:var(--ink);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(20,20,20,.06)}
 .ask-b button:hover{box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue)}
 .ask-n{font-size:11px;color:var(--mute);margin:24px auto 0;line-height:1.55;max-width:420px;text-wrap:balance}
-.ask-name{display:block;margin:0 auto 40px;max-width:380px}
+.ask-name{display:block;margin:30px auto 0;max-width:380px}
+.ask-step{display:none}
+.ask-step.on{display:block;animation:appear 900ms ease both}
+.ask-step .land-go{margin-top:36px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .ask-arch{position:absolute;left:36px;top:28px;z-index:2;width:36px;height:36px;padding:0;display:grid;place-items:center;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);color:var(--mute);cursor:pointer;transition:color 250ms,box-shadow 250ms}
 .ask-arch svg{width:16px;height:16px}
 .ask-arch:hover,.ask-arch:focus-visible{color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);outline:none}
@@ -463,10 +467,20 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 <!-- no on-screen next button; N still moves to the next board (for presenting) -->
 
 <div class="ask landing" id="ask"><div class="ask-bg" id="askBg" aria-hidden="true"></div><button class="ask-arch" id="askArch" title="See the archive" aria-label="See the archive"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="5.5" height="4"/><rect x="9" y="2.5" width="5.5" height="4"/><rect x="1.5" y="9.5" width="5.5" height="4"/><rect x="9" y="9.5" width="5.5" height="4"/></svg></button><div class="ask-land" id="askLand"><h1 class="wordmark" id="wordmark" aria-label="Align"><span>A</span><span>L</span><span>I</span><span>G</span><span>N</span></h1><button class="land-go" id="landGo">Begin</button></div><div class="ask-in">
-  <label class="ask-name"><span>Your name — if you want it on your board</span><input id="askName" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Leave empty to stay anonymous"></label>
-  <div class="ask-q">Before you start — do you have OCD?</div>
-  <div class="ask-b"><button data-a="yes">Yes, diagnosed</button><button data-a="maybe">I don’t know</button><button data-a="no">No</button><button data-a="skip">I’d rather not say</button></div>
-  <div class="ask-n" id="askNote">Nothing but your answer and how you play is kept. If you write your name, it will be shown with your board in the archive — your answer to this question won’t be.</div>
+  <div class="ask-step on" data-s="name">
+    <div class="ask-q">What’s your name?</div>
+    <label class="ask-name"><span class="vh">Your name</span><input id="askName" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Leave empty to stay anonymous"></label>
+    <button class="land-go" id="askNext">Next</button>
+    <div class="ask-n">If you write it, it will be shown with your board in the archive.</div>
+  </div>
+  <div class="ask-step" data-s="ocd">
+    <div class="ask-q">Do you have OCD?</div>
+    <div class="ask-b"><button data-a="yes">Yes, diagnosed</button><button data-a="maybe">I don’t know</button><button data-a="no">No</button><button data-a="skip">I’d rather not say</button></div>
+    <div class="ask-n" id="askNote">Nothing but your answer and how you play is kept. If you wrote your name, your answer to this question won’t be shown with it.</div>
+  </div>
+  <div class="ask-step" data-s="go">
+    <button class="land-go" id="askGo">Let’s begin</button>
+  </div>
 </div></div>
 <div class="opening" id="intro"><p>Something isn’t right.</p></div>
 
@@ -1246,14 +1260,19 @@ function init() {
     setTimeout(() => { ask.classList.add('peek'); b.disabled = false; b.classList.remove('busy'); }, 1300);   // once the archive has faded in over it
   });
   $('archHome').addEventListener('click', () => { Archive.hide(); document.body.classList.remove('peek'); ask.classList.remove('peek'); });
-  ask.querySelectorAll('.ask-b button').forEach(b => b.addEventListener('click', () => {
-    state.ocd = b.dataset.a;
-    ARCH.name = ($('askName').value || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  // one question per page: name, then OCD, then a single button to begin
+  const step = name => ask.querySelectorAll('.ask-step').forEach(x => x.classList.toggle('on', x.dataset.s === name));
+  const nameDone = () => { ARCH.name = ($('askName').value || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40); step('ocd'); };
+  $('askNext').addEventListener('click', nameDone);
+  $('askName').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); nameDone(); } });
+  ask.querySelectorAll('.ask-b button').forEach(b => b.addEventListener('click', () => { state.ocd = b.dataset.a; step('go'); }));
+  $('askGo').addEventListener('click', () => {
+    if (ask.classList.contains('out')) return;
     ask.classList.add('out');
     setTimeout(() => ask.remove(), 1300);
     setTimeout(go, 3600);
     intro.addEventListener('pointerdown', () => setTimeout(go, 200));
-  }));
+  });
 }
 
 /* the first screen: a few of the sixty, large and faint, drifting slowly around the question */
