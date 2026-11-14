@@ -372,6 +372,11 @@ body.peek.focus-panel .arch-home{display:none}
 .ask-name input:focus{border-bottom-color:var(--blue)}
 .ask-name input::placeholder{color:var(--mute);opacity:.6}
 /* the archive's second view: hands — each line a person, running into a shape they kept going back to */
+.arch-head{position:fixed;left:50%;top:44px;transform:translateX(-50%);z-index:31;text-align:center;pointer-events:none;opacity:0;transition:opacity 900ms ease;width:min(900px,calc(100vw - 260px))}
+.arch-head h2{margin:0;font-weight:500;font-size:clamp(24px,2.6vw,36px);letter-spacing:-.015em;line-height:1.1;color:var(--ink)}
+.arch-head p{margin:10px 0 0;font-size:12px;color:var(--mute);letter-spacing:.02em}
+body.arch-on .arch-head{opacity:1}
+body.focus-panel .arch-head,body.view-lines .arch-head{opacity:0}
 .arch-view{position:fixed;left:36px;top:28px;z-index:33;display:flex;flex-direction:column;gap:6px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
 .arch-view.on{opacity:1;pointer-events:auto}
 .arch-view button{width:36px;height:36px;padding:0;display:grid;place-items:center;background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--mute);color:var(--mute);cursor:pointer}
@@ -473,6 +478,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 </div>
 
 <div class="archive" id="archive" aria-label="Archive"><canvas id="archCanvas"></canvas></div>
+<div class="arch-head" id="archHead" aria-live="polite"></div>
 <div class="hands" id="hands" aria-label="Hands"><canvas id="handsCanvas"></canvas></div>
 <div class="hands-tip" id="handsTip"></div>
 <button class="arch-home" id="archHome" title="Back to the start" aria-label="Back to the start"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M2.5 7.5 8 2.5l5.5 5"/><path d="M4 6.5v7h3v-4h2v4h3v-7"/></svg></button>
@@ -1495,6 +1501,12 @@ const Remote = (() => {
         lv: JSON.parse(r.lv), fixes: JSON.parse(r.fixes), tl: JSON.parse(r.tl || '[]') })).filter(r => Array.isArray(r.lv) && r.lv.length === state.tiles.length);
     } catch (e) { return []; }
   }
+  async function withFeel(rows) {        // the 1–5 answer lives with each game's details: fetch them, a few at a time, briefly
+    const need = rows.filter(r => !('feel' in r)).slice(0, 150);
+    const work = (async () => { for (let k = 0; k < need.length; k += 6) await Promise.all(need.slice(k, k + 6).map(async r => { const d = await detail(r.id); if (d) Object.assign(r, d); r.feel = typeof r.feel === 'number' ? r.feel : null; })); })();
+    await Promise.race([work, new Promise(z => setTimeout(z, 5000))]);
+    return rows;
+  }
   async function detail(id) {
     try { const res = await fetch(SHEET_URL + '?id=' + encodeURIComponent(id)); const d = await res.json(); return d && d.ev ? d : null; } catch (e) { return null; }
   }
@@ -1505,7 +1517,7 @@ const Remote = (() => {
     // text/plain keeps the browser from asking permission first; the script reads it as JSON
     fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) }).catch(() => {});
   }
-  return { list, detail, send, cols };
+  return { list, detail, send, cols, withFeel };
 })();
 
 const Archive = (() => {
@@ -1562,14 +1574,15 @@ const Archive = (() => {
     const now = Date.now(), d = [];
     for (let p = 0; p < count; p++) {
       const dur = Math.round(40 + Math.pow(R(), 1.7) * 1500), corr = Math.round(dur * rr(.3, 1.8));
-      // how many they left crooked. The board starts a bit over half crooked, and the shapes pull on each other,
-      // so getting far takes time: someone who left after a minute leaves about as much as they found;
-      // only the ones who stayed long get it down to a third or less — and nobody gets it all.
+      // how many they left crooked. The shapes pull on each other, so getting far takes time:
+      // someone who left after a minute leaves about as much as they found; nobody gets it all.
       const stay = Math.min(1, Math.log(dur / 40) / Math.log(40));           // 0 at forty seconds, 1 at twenty-five minutes
       const gifted = stay > .45 && R() < .12 ? rr(.04, .12) : 0;              // a few of the patient ones get further
       const stuck = stay > .3 && R() < .14 ? rr(.06, .16) : 0;                // and some stayed long and only went round in circles
-      let frac = .62 - .34 * Math.pow(stay, 1.15) - gifted + stuck + rr(-.08, .08);
-      let L = Math.max(Math.round(N * .12), Math.min(Math.round(N * .78), Math.round(frac * N)));
+      // calibrated on the real games: almost nothing is truly straight at the start, a minute and a half gets
+      // someone to about eight of eighty-four, and only the ones who stay very long get past half
+      let frac = .98 - .56 * Math.pow(stay, 1.3) - gifted + stuck + rr(-.05, .05);
+      let L = Math.max(Math.round(N * .3), Math.min(N, Math.round(frac * N)));
       // which ones: the hard few nearly always, the rest by chance
       const pool = hard.map((h, i) => [i, (h > .3 ? 6 : 1) * (.5 + R())]), lv = new Array(N).fill(STRAIGHT);
       for (let n = 0; n < L; n++) {
@@ -1589,7 +1602,7 @@ const Archive = (() => {
       const lean = { yes: 1, maybe: .6, no: .2, skip: .45 }[ocd], hsh = k => ((p + 1) * 2654435761 + k * 40503) % 1000 / 1000, long = Math.min(1, dur / 400);
       const tools = Object.fromEntries(['ruler', 'level', 'lens', 'grid'].map((k, j) => { const n = hsh(j) < lean * .8 ? Math.round(1 + hsh(j + 7) * 14 * lean * long * [1, .9, .6, .3][j]) : 0; return [k, [n, Math.round(n * (4 + hsh(j + 3) * 20))]]; }));
       // how right it felt (a guess for the demo crowd: more straight feels a little better; saying yes to OCD, a little worse)
-      const feel = Math.max(1, Math.min(5, Math.round(1 + 4 * ((N - L) / N - .3) / .55 - (ocd === 'yes' ? 1 : ocd === 'maybe' ? .4 : 0) + (hsh(11) - .5) * 1.6)));
+      const feel = Math.max(1, Math.min(5, Math.round(1.3 + 3.6 * ((N - L) / N) / .6 - (ocd === 'yes' ? 1 : ocd === 'maybe' ? .4 : 0) + (hsh(11) - .5) * 1.6)));
       d.push({ demo: true, ocd, end, wait, feel, total: dur + wait, tools, at: now - Math.round(rr(.2, 120) * 864e5), dur, corr, lv, left: lv.filter(x => x !== STRAIGHT).length, fixes: w.map(x => Math.round(x / ws * corr)), tl, last: pk(lines) });
     }
     return d;
@@ -1641,6 +1654,7 @@ const Archive = (() => {
     const W = innerWidth, H = innerHeight, z = V.z;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+    drawFrame();
     const big = BW * z > 300, far = BW * z < 150;
     for (let i = 0; i < list.length; i++) {
       const rec = list[i];
@@ -1706,8 +1720,8 @@ const Archive = (() => {
   }
   function fitAll() {
     const x0 = bounds.c0 * CW, y0 = bounds.r0 * CH, W = (bounds.c1 - bounds.c0 + 1) * CW - GAP, H = (bounds.r1 - bounds.r0 + 1) * CH - GAP;
-    const z = Math.min((innerWidth - 60) / W, (innerHeight - 140) / H, innerWidth * .32 / BW);
-    return { x: (innerWidth - W * z) / 2 - x0 * z, y: (innerHeight - 60 - H * z) / 2 - y0 * z, z };
+    const z = Math.min((innerWidth - 300) / W, (innerHeight - 290) / H, innerWidth * .32 / BW);   // room for the scales, and the sentence above
+    return { x: (innerWidth - W * z) / 2 - x0 * z + 30, y: 150 + (innerHeight - 290 - H * z) / 2 - y0 * z, z };
   }
   function focusOn(i, widthShare, rightPanel) {
     const [wx, wy] = cellXY(i), pw = rightPanel ? Math.min(400, innerWidth * .36) : 0;
@@ -1716,33 +1730,78 @@ const Archive = (() => {
     const cx = rightPanel ? 40 + availW / 2 : innerWidth / 2, cy = rightPanel ? 40 + availH / 2 : innerHeight / 2;
     return { x: cx - (wx + BW / 2) * z, y: cy - (wy + BH / 2) * z, z };
   }
-  /* where each board goes: further right the longer they stayed, lower the more they left crooked.
-     Boards that want the same place push each other outward — a cloud, dense where people were alike. */
-  let remote = [];
+  /* where each board goes: further right the straighter it really was; higher the more right it felt to them
+     (their own answer, 1–5, one band each). Boards that want the same place push each other aside within their band. */
+  let remote = [], BANDS = null;
+  const bandOf = r => typeof r.feel === 'number' ? 5 - r.feel : 5;           // 0 = felt just right (top) … 4 = not at all, 5 = didn't answer
   function layout() {
     const past = MODE === 'live'
       ? [...remote.filter(r => !(mine && r.at === mine.at)), ...demos(280)]               // the published site: real people, plus two hundred and eighty demo visitors (marked "demo")
       : [...load().filter(r => r.lv && r.lv.length === N && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
     list = mine ? [mine, ...past] : past;
-    const GW = Math.max(10, Math.min(54, Math.round(Math.sqrt(list.length) * 2.2))), GH = Math.max(6, Math.round(GW * CW / CH / (innerWidth / innerHeight)));
-    const ld = list.map(r => Math.log(Math.max(20, r.dur))), lo = Math.min(...ld), hi = Math.max(...ld);
+    const GW = Math.max(12, Math.min(60, Math.round(Math.sqrt(list.length) * 2.4)));
+    const counts = new Array(6).fill(0); list.forEach(r => counts[bandOf(r)]++);
+    const nb = counts[5] ? 6 : 5;
+    const BR = Math.max(2, Math.ceil(Math.max(...counts) / (GW * .42)));        // rows per band, enough for the busiest one
+    const top = b => b * (BR + 1);                                                // a free row between bands
+    BANDS = { GW, BR, nb, top };
     const R = mulberry(77);
     const order = list.map((r, i) => i).sort((a, b) => (list[b] === mine) - (list[a] === mine) || R() - .5);
-    occ = new Map(); bounds = { c0: 1e9, c1: -1e9, r0: 1e9, r1: -1e9 };
+    occ = new Map();
     order.forEach(i => {
-      const r = list[i], j = r === mine ? 0 : 1.6;
-      const tc = Math.round((Math.log(Math.max(20, r.dur)) - lo) / (hi - lo || 1) * (GW - 1) + (R() - .5) * j * 2);
-      const tr = Math.round(r.left / N * (GH - 1) + (R() - .5) * j * 2);
-      for (let rad = 0; rad < 80; rad++) {
+      const r = list[i], b = bandOf(r), r0 = top(b), r1 = r0 + BR - 1, j = r === mine ? 0 : 1;
+      const tc = Math.round((N - r.left) / N * (GW - 1) + (R() - .5) * j * 2);
+      const tr = r0 + Math.floor(BR / 2) + Math.round((R() - .5) * j * (BR - 1));
+      for (let rad = 0; rad < 200; rad++) {
         const ring = [];
-        for (let dx = -rad; dx <= rad; dx++) for (let dy = -rad; dy <= rad; dy++) if (Math.max(Math.abs(dx), Math.abs(dy)) === rad) ring.push([dx, dy, dx * dx * .6 + dy * dy + R() * .5]);
+        for (let dx = -rad; dx <= rad; dx++) for (let dy = -rad; dy <= rad; dy++)
+          if (Math.max(Math.abs(dx), Math.abs(dy)) === rad && tr + dy >= r0 && tr + dy <= r1 && tc + dx >= 0) ring.push([dx, dy, dx * dx + dy * dy * .5 + R() * .5]);
         ring.sort((p, q) => p[2] - q[2]);
         const hit = ring.find(([dx, dy]) => !occ.has(`${tc + dx},${tr + dy}`));
         if (hit) { r._gx = tc + hit[0]; r._gy = tr + hit[1]; occ.set(`${r._gx},${r._gy}`, i); break; }
       }
-      bounds.c0 = Math.min(bounds.c0, r._gx); bounds.c1 = Math.max(bounds.c1, r._gx);
-      bounds.r0 = Math.min(bounds.r0, r._gy); bounds.r1 = Math.max(bounds.r1, r._gy);
     });
+    bounds = { c0: Math.min(0, ...list.map(r => r._gx)), c1: Math.max(GW - 1, ...list.map(r => r._gx)), r0: 0, r1: top(nb - 1) + BR - 1 };
+    gapText();
+  }
+  /* the one sentence over the wall: was it better than it felt? */
+  function gapText() {
+    const rs = list.filter(r => typeof r.feel === 'number');
+    const el = $('archHead'); if (!el) return;
+    if (rs.length < 3) { el.innerHTML = ''; return; }
+    let better = 0, worse = 0;
+    rs.forEach(r => { const was = (N - r.left) / N, felt = (r.feel - 1) / 4; if (was > felt + .02) better++; else if (felt > was + .02) worse++; });
+    const h = better >= rs.length / 2 ? 'It was better than it felt.' : worse >= rs.length / 2 ? 'It felt better than it was.' : 'Mostly, it felt the way it was.';
+    const sub = better >= worse ? `For ${better} of ${rs.length} people, the board was straighter than it felt.` : `For ${worse} of ${rs.length} people, it felt straighter than it was.`;
+    el.innerHTML = `<h2>${h}</h2><p>${sub}</p>`;
+  }
+  /* the frame around the wall: one band per answer, the line where feeling and fact agree, and the two scales */
+  function drawFrame() {
+    if (!BANDS) return;
+    const { GW, BR, nb, top } = BANDS, z = V.z, font = getComputedStyle(document.body).fontFamily;
+    const X = gx => V.x + gx * CW * z, Y = gy => V.y + gy * CH * z;
+    const xL = X(0) - 10 * z, xR = X(GW - 1) + BW * z + 10 * z;
+    ctx.save();
+    ctx.globalAlpha = cur >= 0 ? .25 : 1;
+    for (let b = 0; b < nb; b++) {
+      const y0 = Y(top(b)) - GAP * z / 2 - 6 * z, y1 = Y(top(b) + BR) - GAP * z / 2 + 6 * z;
+      ctx.fillStyle = b % 2 ? 'rgba(255,255,255,0)' : 'rgba(255,255,255,.4)'; ctx.fillRect(xL, y0, xR - xL, y1 - y0);
+      ctx.fillStyle = '#8C8981'; ctx.font = `11px ${font}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(b < 5 ? String(5 - b) : 'no answer', xL - 12, (y0 + y1) / 2);
+    }
+    // where it felt exactly the way it was
+    const cx = w => X(w * (GW - 1)) + BW * z / 2, cy = f => Y(top(5 - f) + BR / 2) - GAP * z / 2;
+    ctx.strokeStyle = 'rgba(20,20,20,.4)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx(0), cy(1)); ctx.lineTo(cx(1), cy(5)); ctx.stroke(); ctx.setLineDash([]);
+    // scales
+    const yA = Y(top(nb - 1) + BR) + 10;
+    ctx.fillStyle = '#8C8981'; ctx.fillRect(cx(0), yA, cx(1) - cx(0), 1);
+    ctx.font = `10px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let v = 0; v <= 4; v++) { const x = cx(v / 4); ctx.fillRect(x - .5, yA - 3, 1, 7); ctx.fillText(`${v * 25}%`, x, yA + 10); }
+    ctx.fillText('HOW STRAIGHT IT REALLY WAS', (cx(0) + cx(1)) / 2, yA + 28);
+    ctx.save(); ctx.translate(xL - 44, (Y(0) + Y(top(4) + BR)) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle';
+    ctx.fillText('HOW RIGHT IT FELT', 0, 0); ctx.restore();
+    ctx.restore();
   }
 
   /* ---- stepping into one board ---- */
@@ -1915,7 +1974,7 @@ const Archive = (() => {
     resetView(false);
     sprites = makeSprites();
     save();
-    if (MODE === 'live') remote = await Remote.list();
+    if (MODE === 'live') remote = await Remote.withFeel(await Remote.list());
     layout();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
     const mi = list.indexOf(mine);
@@ -1950,10 +2009,10 @@ const Archive = (() => {
   }
   async function show() {           // open the wall without the arrival (presenter key)
     if (!sprites) sprites = makeSprites();
-    if (MODE === 'live') remote = await Remote.list();
+    if (MODE === 'live') remote = await Remote.withFeel(await Remote.list());
     layout();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
-    return ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); });
+    return ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); document.body.classList.add('arch-on'); });
   }
 
   /* ======================================================
@@ -2054,7 +2113,7 @@ const Archive = (() => {
   }
   function setMode(v) {
     if (v === view) return;
-    view = v;
+    view = v; document.body.classList.toggle('view-lines', v === 'hands');
     $('archView').querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.v === v));
     if (v === 'hands') {
       if (cur >= 0) back();
@@ -2075,7 +2134,7 @@ const Archive = (() => {
     addEventListener('resize', () => { if (view === 'hands') { hSize(); hRedraw(); } });
   }
   function controls() { if (view !== 'hands') $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); }
-  function hide() { setMode('boards'); $('archView').classList.remove('on'); $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
+  function hide() { setMode('boards'); document.body.classList.remove('arch-on'); $('archView').classList.remove('on'); $('archive').classList.remove('on'); $('archZoom').classList.remove('on'); $('archOcd').classList.remove('on'); $('archStat').classList.remove('on'); $('archPanel').classList.remove('on'); cur = -1; }
   return { save, show, hide, arrive, demos, levels };
 })();
 
