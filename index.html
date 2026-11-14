@@ -318,6 +318,7 @@ body.ended .tray,body.ended .tool,body.ended .guide{display:none !important}
 .ap-feel{font-size:15px;margin-top:6px;color:var(--ink)}
 .ap-feel:empty{display:none}
 .ap-feel b{font-weight:500}
+.ap-you{display:block;margin-bottom:8px;color:var(--ink)}
 /* ---------- the question, before anything ---------- */
 .ask{position:fixed;inset:0;z-index:13;display:grid;place-items:center;background:var(--bg);transition:opacity 1200ms ease}
 .ask.out{opacity:0;pointer-events:none}
@@ -1529,7 +1530,7 @@ const Archive = (() => {
   const qz = f => { let b = 0; LEVEL.forEach((l, k) => { if (Math.abs(l - f) < Math.abs(LEVEL[b] - f)) b = k; }); return f && b === STRAIGHT ? (f > 0 ? 5 : 3) : b; };
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
   const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
-  const feelText = r => typeof r.feel === 'number' ? `${r === mine ? 'To you it felt' : 'To them it felt'} <b>${r.feel}</b> of 5 right.` : '';
+  const feelText = r => (r === mine && YOU ? `<span class="ap-you">${YOU.h}${YOU.p ? ` ${YOU.p}` : ''}</span>` : '') + (typeof r.feel === 'number' ? `${r === mine ? 'To you it felt' : 'To them it felt'} <b>${r.feel}</b> of 5 right.` : '');
   const endChoice = r => !r.end ? '' : `<span class="ap-btn${r.end === 'done' ? ' on' : ''}">I’m done</span><span class="ap-btn${r.end === 'gave_up' ? ' on' : ''}">I give up</span>${r.end === 'idle' ? `<i>${r === mine ? 'You' : 'They'} pressed neither — ${r === mine ? 'you' : 'they'} stopped touching it.</i>` : ''}`;
   const endText = r => (r === mine ? { done: 'You said you were done.', gave_up: 'You gave up.', idle: 'You stopped touching it.' } : { done: 'Said they were done.', gave_up: 'Gave up.', idle: 'Stopped touching it.' })[r.end] || '';
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1771,9 +1772,41 @@ const Archive = (() => {
     gapText();
   }
   /* the one sentence over the wall: was it better than it felt? */
+  /* after you play: two lines about you. The first, how it was against how it felt; the second, one thing you did
+     that stood out most against everyone else. No comfort, no verdict. */
+  const SHAPE_WORD = { stripes: 'the stripes', ring: 'the open ring', square: 'the square', triangle: 'the triangle', cross: 'the cross', dots: 'the four dots',
+    diamond: 'the diamond', chevrons: 'the chevrons', halfsplit: 'the split circle', bars: 'the bars', concentric: 'the rings', radial: 'the burst',
+    checker: 'the checkerboard', nested: 'the nested squares', row: 'the three in a row', hexagon: 'the hexagon' };
+  let YOU = null;
+  function youText() {
+    if (!mine) return null;
+    const others = list.filter(r => r !== mine), was = r => (N - r.left) / N;
+    const med = a => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)] || 0; };
+    const better = was(mine) > med(others.map(was)), f = mine.feel;
+    let h;
+    if (typeof f !== 'number') h = better ? 'It was straighter than most.' : 'Most of it was still a little off.';
+    else if (f === 3) h = 'You weren’t sure. Neither was the board.';
+    else if (better) h = f >= 4 ? 'It was straighter than most. You could tell.' : 'It was straighter than most. It didn’t feel that way.';
+    else h = f >= 4 ? 'It felt right to you. Most of it was still a little off.' : 'It wasn’t there yet, and you felt it.';
+    // the one thing that stands out most: how rarely others did as much of it
+    const pct = (v, arr) => arr.filter(x => x < v).length / Math.max(1, arr.length);
+    const sample = others.slice(0, 160), cands = [];
+    const c = checks(mine, list.indexOf(mine));
+    if (c && c.n > 0) cands.push([pct(c.n, sample.map(r => { const k = checks(r, list.indexOf(r)); return k ? k.n : 0; })), `You touched ${c.n} ${c.n === 1 ? 'shape that was' : 'shapes that were'} already right.`]);
+    const mx = Math.max(0, ...mine.fixes);
+    if (mx >= 3) { const i = mine.fixes.indexOf(mx); cands.push([pct(mx, sample.map(r => Math.max(0, ...r.fixes))), `You kept going back to ${SHAPE_WORD[state.tiles[i].shape] || 'one shape'}. ${mx} times.`]); }
+    if (typeof mine.wait === 'number') {             // waiting long is unusual, and so is not waiting at all
+      const q = pct(mine.wait, sample.filter(r => typeof r.wait === 'number').map(r => r.wait)), w = Math.max(1, Math.round(mine.wait));
+      cands.push(q >= .5 ? [q, `You looked for ${w} seconds before you touched anything.`] : [1 - q, `You started fixing within ${w} second${w === 1 ? '' : 's'}.`]);
+    }
+    cands.sort((a, b) => b[0] - a[0]);
+    return { h, p: cands.length ? cands[0][1] : '' };
+  }
   function gapText() {
     const rs = list.filter(r => typeof r.feel === 'number');
     const el = $('archHead'); if (!el) return;
+    if (mine) { YOU = youText(); el.innerHTML = `<h2>${YOU.h}</h2>${YOU.p ? `<p>${YOU.p}</p>` : ''}`; return; }
+    el.innerHTML = ''; return;           // without a game of your own, the wall says nothing (the general sentences below are kept, unused)
     if (rs.length < 3) { el.innerHTML = ''; return; }
     let better = 0, worse = 0;
     rs.forEach(r => { const was = (N - r.left) / N, felt = (r.feel - 1) / 4; if (was > felt + .02) better++; else if (felt > was + .02) worse++; });
