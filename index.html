@@ -3146,6 +3146,7 @@ const Sound = (() => {
   }
   const live = () => ctx && ctx.state === 'running';
   function level(x) {            // x: 0 = everything right, 1 = nothing right
+    return;   // background drone removed: only the short click sounds remain
     if (!ctx || document.body.classList.contains('harmony') || state.ended) return;
     const t = ctx.currentTime;
     hum.gain.setTargetAtTime(.03 + x * .06, t, .7);
