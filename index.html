@@ -1720,6 +1720,20 @@ const Archive = (() => {
       }
       ctx.globalAlpha = 1;
     }
+    // your board: a thin black frame and a small YOU tag above it, the same size at every distance
+    const mi = mine && mine.landed ? list.indexOf(mine) : -1;
+    if (mi >= 0 && (cur < 0 || cur === mi)) {
+      const x = V.x + mine._gx * CW * z, y = V.y + mine._gy * CH * z, w = BW * z, h = BH * z, o = Math.max(2, 3 * z);
+      ctx.save();
+      ctx.strokeStyle = '#141414'; ctx.lineWidth = 1.5; ctx.strokeRect(x - o, y - o, w + 2 * o, h + 2 * o);
+      const font = getComputedStyle(document.body).fontFamily;
+      ctx.font = `600 10px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const lw = ctx.measureText('YOU').width + 12, ly = y - o - 14;
+      ctx.fillStyle = '#141414'; ctx.fillRect(x + w / 2 - lw / 2, ly - 8, lw, 16);
+      ctx.fillRect(x + w / 2 - .75, ly + 8, 1.5, y - o - ly - 8);
+      ctx.fillStyle = '#F0EEEA'; ctx.fillText('YOU', x + w / 2, ly + .5);
+      ctx.restore();
+    }
   }
   const redraw = () => { if (!raf) raf = requestAnimationFrame(draw); };
   function warm() {           // make every small picture ahead of time, a few at a time, so the pull-back stays smooth
@@ -1856,6 +1870,15 @@ const Archive = (() => {
     const cx = w => X(w * (GW - 1)) + BW * z / 2, cy = f => Y(top(5 - f) + BR / 2) - GAP * z / 2;
     ctx.strokeStyle = 'rgba(20,20,20,.4)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx(0), cy(1)); ctx.lineTo(cx(1), cy(5)); ctx.stroke(); ctx.setLineDash([]);
+    {   // say which side is which, written along the line
+      const x0 = cx(0), y0 = cy(1), x1 = cx(1), y1 = cy(5), ang = Math.atan2(y1 - y0, x1 - x0);
+      const px = x0 + (x1 - x0) * .82, py = y0 + (y1 - y0) * .82;
+      ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
+      ctx.fillStyle = '#8C8981'; ctx.font = `10px ${font}`; ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom'; ctx.fillText('↑  FELT RIGHTER THAN IT WAS', 0, -8);
+      ctx.textBaseline = 'top'; ctx.fillText('FELT LESS RIGHT THAN IT WAS  ↓', 0, 8);
+      ctx.restore();
+    }
     // scales
     const yA = Y(top(nb - 1) + BR) + 10;
     ctx.fillStyle = '#8C8981'; ctx.fillRect(cx(0), yA, cx(1) - cx(0), 1);
