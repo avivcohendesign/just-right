@@ -1720,6 +1720,11 @@ const Archive = (() => {
       }
       ctx.globalAlpha = 1;
     }
+    if (document.body.classList.contains('arch-on') && cur < 0) {   // the floor fades out under the sentence, so it stays readable as you wander
+      const g = ctx.createLinearGradient(0, 0, 0, 150); g.addColorStop(0, BG); g.addColorStop(.6, BG); g.addColorStop(1, 'rgba(240,238,234,0)');
+      ctx.globalAlpha = .94; ctx.fillStyle = g; ctx.fillRect(0, 0, W, 150); ctx.globalAlpha = 1;
+    }
+    drawScales();
     // your board: a thin black frame and a small YOU tag above it, the same size at every distance
     const mi = mine && mine.landed ? list.indexOf(mine) : -1;
     if (mi >= 0 && (cur < 0 || cur === mi)) {
@@ -1761,6 +1766,22 @@ const Archive = (() => {
     const z = Math.min((innerWidth - 300) / W, (innerHeight - 290) / H, innerWidth * .32 / BW);   // room for the scales, and the sentence above
     return { x: (innerWidth - W * z) / 2 - x0 * z + 30, y: 150 + (innerHeight - 290 - H * z) / 2 - y0 * z, z };
   }
+  /* the way in: much closer than the whole wall, so it runs past every edge of the screen and you wander it.
+     Centred on your board if you just played, otherwise on the middle of the wall. */
+  function explore() {
+    const f = fitAll(), z = f.z * 2.1;
+    const mi = mine && list.indexOf(mine);
+    const px = mi >= 0 && mine ? mine._gx * CW + BW / 2 : ((bounds.c0 + bounds.c1 + 1) / 2) * CW;
+    const py = mi >= 0 && mine ? mine._gy * CH + BH / 2 : ((bounds.r0 + bounds.r1 + 1) / 2) * CH;
+    let x = innerWidth / 2 - px * z, y = innerHeight / 2 + 40 - py * z;
+    // but never leave empty floor on screen: the wall always reaches past the edges
+    const wx0 = bounds.c0 * CW, wx1 = (bounds.c1 + 1) * CW, wy0 = bounds.r0 * CH, wy1 = (bounds.r1 + 1) * CH;
+    const L = 110, Rr = innerWidth - 20, T = 150, Bb = innerHeight - 90;
+    x = (wx1 - wx0) * z > Rr - L ? Math.min(L - wx0 * z, Math.max(Rr - wx1 * z, x)) : (L + Rr) / 2 - (wx0 + wx1) / 2 * z;
+    y = (wy1 - wy0) * z > Bb - T ? Math.min(T - wy0 * z, Math.max(Bb - wy1 * z, y)) : (T + Bb) / 2 - (wy0 + wy1) / 2 * z;
+    return { x, y, z };
+  }
+  let before = null;   // where you were standing before you stepped into a board
   function focusOn(i, widthShare, rightPanel) {
     const [wx, wy] = cellXY(i), pw = rightPanel ? Math.min(400, innerWidth * .36) : 0;
     const availW = innerWidth - pw - 80, availH = innerHeight - 80;
@@ -1777,7 +1798,7 @@ const Archive = (() => {
       ? [...remote.filter(r => !(mine && r.at === mine.at)), ...demos(280)]               // the published site: real people, plus two hundred and eighty demo visitors (marked "demo")
       : [...load().filter(r => r.lv && r.lv.length === N && !(mine && r.at === mine.at)), ...demos()];         // this computer: games here + the simulated six hundred
     list = mine ? [mine, ...past] : past;
-    const GW = Math.max(12, Math.min(60, Math.round(Math.sqrt(list.length) * 2.4)));
+    const GW = Math.max(12, Math.min(80, Math.round(Math.sqrt(list.length) * 3.2)));
     const counts = new Array(6).fill(0); list.forEach(r => counts[bandOf(r)]++);
     const nb = counts[5] ? 6 : 5;
     const BR = Math.max(2, Math.ceil(Math.max(...counts) / (GW * .42)));        // rows per band, enough for the busiest one
@@ -1857,14 +1878,14 @@ const Archive = (() => {
     if (!BANDS) return;
     const { GW, BR, nb, top } = BANDS, z = V.z, font = getComputedStyle(document.body).fontFamily;
     const X = gx => V.x + gx * CW * z, Y = gy => V.y + gy * CH * z;
-    const xL = X(0) - 10 * z, xR = X(GW - 1) + BW * z + 10 * z;
+    const xL = 0, xR = innerWidth, xW = X(0) - 10 * z;
     ctx.save();
     ctx.globalAlpha = cur >= 0 ? .25 : 1;
     for (let b = 0; b < nb; b++) {
       const y0 = Y(top(b)) - GAP * z / 2 - 6 * z, y1 = Y(top(b) + BR) - GAP * z / 2 + 6 * z;
       ctx.fillStyle = b % 2 ? 'rgba(255,255,255,0)' : 'rgba(255,255,255,.4)'; ctx.fillRect(xL, y0, xR - xL, y1 - y0);
       ctx.fillStyle = '#8C8981'; ctx.font = `11px ${font}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-      ctx.fillText(b < 5 ? String(5 - b) : 'no answer', xL - 12, (y0 + y1) / 2);
+      ctx.fillText(b < 5 ? String(5 - b) : 'no answer', Math.max(xW - 12, 72), (y0 + y1) / 2);
     }
     // where it felt exactly the way it was
     const cx = w => X(w * (GW - 1)) + BW * z / 2, cy = f => Y(top(5 - f) + BR / 2) - GAP * z / 2;
@@ -1879,20 +1900,33 @@ const Archive = (() => {
       ctx.textBaseline = 'top'; ctx.fillText('FELT LESS RIGHT THAN IT WAS  ↓', 0, 8);
       ctx.restore();
     }
-    // scales
-    const yA = Y(top(nb - 1) + BR) + 10;
-    ctx.fillStyle = '#8C8981'; ctx.fillRect(cx(0), yA, cx(1) - cx(0), 1);
-    ctx.font = `10px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    for (let v = 0; v <= 4; v++) { const x = cx(v / 4); ctx.fillRect(x - .5, yA - 3, 1, 7); ctx.fillText(`${v * 25}%`, x, yA + 10); }
-    ctx.fillText('HOW STRAIGHT IT REALLY WAS', (cx(0) + cx(1)) / 2, yA + 28);
-    ctx.save(); ctx.translate(xL - 44, (Y(0) + Y(top(4) + BR)) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle';
-    ctx.fillText('HOW RIGHT IT FELT', 0, 0); ctx.restore();
     ctx.restore();
   }
 
+  /* the two scales, drawn over the boards so they stay readable when the wall runs under them */
+  function drawScales() {
+    if (!BANDS) return;
+    const { GW, BR, nb, top } = BANDS, z = V.z, font = getComputedStyle(document.body).fontFamily;
+    const X = gx => V.x + gx * CW * z, Y = gy => V.y + gy * CH * z, xW = X(0) - 10 * z;
+    const cx = w => X(w * (GW - 1)) + BW * z / 2;
+    ctx.save();
+    ctx.globalAlpha = cur >= 0 ? .25 : 1;
+    // scales
+    const yW = Y(top(nb - 1) + BR) + 10, yA = Math.min(yW, innerHeight - 64);
+    if (yA < yW) { ctx.fillStyle = BG; ctx.globalAlpha = .92 * (cur >= 0 ? .25 : 1); ctx.fillRect(0, yA - 14, innerWidth, innerHeight - yA + 14); ctx.globalAlpha = cur >= 0 ? .25 : 1; }
+    ctx.fillStyle = '#8C8981'; ctx.fillRect(cx(0), yA, cx(1) - cx(0), 1);
+    ctx.font = `10px ${font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const vis0 = Math.max(cx(0), 130), vis1 = Math.min(cx(1), innerWidth - 190);   // keep clear of the zoom buttons and the legend
+    for (let v = 0; v <= 4; v++) { const x = cx(v / 4); ctx.fillRect(x - .5, yA - 3, 1, 7); if (x > vis0 - 30 && x < vis1 + 20) ctx.fillText(`${v * 25}%`, x, yA + 10); }
+    if (vis1 > vis0) ctx.fillText('HOW STRAIGHT IT REALLY WAS', (vis0 + vis1) / 2, yA + 28);
+    ctx.save(); ctx.translate(Math.max(xW - 44, 30), Math.min(Math.max((Y(0) + Y(top(4) + BR)) / 2, 200), innerHeight - 200)); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle';
+    ctx.fillText('HOW RIGHT IT FELT', 0, 0); ctx.restore();
+    ctx.restore();
+  }
   /* ---- stepping into one board ---- */
   function enter(i) {
     if (i < 0 || i >= list.length) return;
+    if (cur < 0) before = { ...V };
     cur = i; hover = -1;
     $('archive').classList.add('focus'); document.body.classList.add('focus-panel');
     play = null;
@@ -1902,7 +1936,7 @@ const Archive = (() => {
   function back() {
     if (cur < 0) return;
     cur = -1; play = null; $('archPanel').classList.remove('on'); $('archive').classList.remove('focus'); document.body.classList.remove('focus-panel');
-    glide(fitAll(), 1100);
+    glide(before || explore(), 1100);
   }
   /* ---- watching them try: the session played back, fast ---- */
   const levels = () => { const e = computeErrors(), tol = LV().tol; return state.tiles.map((t, i) => qz(flaw(e[i], tol))); };
@@ -2042,7 +2076,7 @@ const Archive = (() => {
       if (cur >= 0 && ev.key === 'ArrowRight') enter((cur + 1) % list.length);
       if (cur >= 0 && ev.key === 'ArrowLeft') enter((cur - 1 + list.length) % list.length);
     });
-    addEventListener('resize', () => { if (!A.classList.contains('on')) return; sizeCanvas(); setView(cur >= 0 ? focusOn(cur, 0, true) : fitAll()); });
+    addEventListener('resize', () => { if (!A.classList.contains('on')) return; sizeCanvas(); setView(cur >= 0 ? focusOn(cur, 0, true) : explore()); });
     let idle = performance.now();
     ['pointermove', 'wheel', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, () => { idle = performance.now(); }, { passive: true }));
     setInterval(() => { if (A.classList.contains('on') && performance.now() - idle > 180000) location.reload(); }, 5000);
@@ -2089,7 +2123,7 @@ const Archive = (() => {
       stageEl.style.transition = 'opacity 500ms ease'; stageEl.style.opacity = 0;
       setTimeout(() => { stageEl.style.display = 'none'; }, 520);
       // and then you fall away from it, until it is one among hundreds
-      setTimeout(() => { glide(fitAll(), 6500, controls); setTimeout(() => document.body.classList.add('arch-on'), 2200); }, 900);   // the two lines about you come in as you pull away
+      setTimeout(() => { glide(explore(), 6500, controls); setTimeout(() => document.body.classList.add('arch-on'), 2200); }, 900);   // the two lines about you come in as you pull away
       setTimeout(controls, 900 + 6600);                      // even if someone grabs the wall while it's pulling back
     }, 1800);
   }
@@ -2098,7 +2132,7 @@ const Archive = (() => {
     if (MODE === 'live') remote = await Remote.withFeel(await Remote.list());
     layout();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
-    return ready().then(() => { warm(); setView(fitAll()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); document.body.classList.add('arch-on'); });
+    return ready().then(() => { warm(); setView(explore()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); document.body.classList.add('arch-on'); });
   }
 
   /* ======================================================
