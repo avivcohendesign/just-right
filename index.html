@@ -2936,7 +2936,7 @@ $('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5);
    body: lands on a tile you haven't touched yet, as if it hurts.  sym: after you touch one, it has to be evened out.
    loop: when you keep going back — nothing you did counts. */
 const SYM = ['Touch it again so it’s equal on both sides.', 'You touched the left one. Now the right one.', 'You turned it twice. Turn it twice the other way.', 'It has to be even.', 'That one got more attention. Not fair.', 'Now the same on the other side.', 'Even it out.', 'It’s heavier on the left now.', 'Both sides. The same.', 'One more, so it matches.'];
-const LOOP = ['Again. Properly this time.', 'That one didn’t count.', 'Start over. In the right order.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.', 'From the beginning.', 'Not like that. Again.', 'Slower this time.', 'Wait. Do it again.', 'You lost count. Again.'];
+const LOOP = ['Again. Properly this time.', 'That one didn’t count.', 'Left to right. Start again.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.', 'From the beginning.', 'Not like that. Again.', 'Slower this time.', 'Wait. Do it again.', 'You lost count. Again.'];
 const BODY = ['This one really hurts.', 'I can feel this one in my teeth.', 'This one is itching.', 'Can’t you feel that one?', 'That one is looking at me.', 'It’s pulling. Over here.', 'This one won’t let me breathe.', 'This one is too loud.', 'That one is pressing on me.', 'I can’t look at that one.'];
 const both = a => ({ early: a, late: a });
 const VOICE_LINES = {
