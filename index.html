@@ -214,6 +214,7 @@ body.harmony .zoomer{opacity:0;pointer-events:none}
 .note-h i{font-style:normal;letter-spacing:.08em;opacity:.6;font-variant-numeric:tabular-nums}
 .note-x{border:0;background:none;padding:0 0 0 6px;margin:-2px -4px 0 0;font:15px/1 "SF Mono",ui-monospace,Menlo,monospace;color:var(--mute);cursor:pointer}
 .note-x:hover{color:var(--ink)}
+.note.gone{opacity:0;transform:scale(.96);transition:opacity 450ms ease,transform 450ms ease}
 .note .ln{display:block;width:auto;max-width:none;background:none;padding:0;white-space:pre-wrap;word-break:break-word}
 body.harmony .notes{opacity:.12}
 body.harmony .log{opacity:.12}
@@ -620,7 +621,7 @@ const sign = () => (Math.random() < .5 ? -1 : 1);
    ====================================================== */
 const MODE = 'live';
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwyaoaEVjITJ_szti6NZq0q2RwZL--TMGOLMyJBj8ZsrwR7zYiVBz6DR48MeNqJJSGzCg/exec';
-const ARCH = { shownAt: 0, endedAt: 0, end: '', name: '', lastNote: '', timeline: [], preview: false, start: null, prev: null, events: [], touches: [] };   // what the archive keeps of you
+const ARCH = { shownAt: 0, endedAt: 0, end: '', name: '', lastNote: '', timeline: [], preview: false, start: null, prev: null, events: [], touches: [], obey: 0, ignore: 0, pushed: 0 };   // what the archive keeps of you
 const state = { ocd: null, level: 0, tiles: [], locked: false, started: false, t0: 0, corrections: 0, fig: 1, drag: null, ritual: null, rituals: 0 };
 
 function svgEl(tag, attrs, parent) {
@@ -926,7 +927,7 @@ function bind(tile) {
     state.drag = { tile, x: ev.clientX, moved: false, id: ev.pointerId, e0: Math.abs(e0[i0]), dep, d0: dep >= 0 ? Math.abs(e0[dep]) : 0 };
     el.classList.add('active');
     begin();
-    Voice.poke();
+    Voice.poke(); Voice.touched(tile);
     if (tile.perfect) Voice.say('check', tile);
     else Voice.revisit(tile);
   });
@@ -975,7 +976,7 @@ function bind(tile) {
     if (!delta) return;
     ev.preventDefault();
     begin();
-    Voice.poke();
+    Voice.poke(); Voice.touched(tile);
     tile.s = clamp(tile.s + delta);
     state.corrections++; tile.fixes++;
     counters();
@@ -1532,7 +1533,7 @@ const Remote = (() => {
   function send(rec) {
     const row = { at: rec.at, name: rec.name, ocd: rec.ocd, dur: rec.dur, corr: rec.corr, left: rec.left, chk: rec.chk,
       lv: JSON.stringify(rec.lv), fixes: JSON.stringify(rec.fixes), tl: JSON.stringify(rec.tl.map(v => +v.toFixed(2))),
-      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end, total: rec.total, wait: rec.wait, tools: rec.tools, feel: rec.feel }) };
+      detail: JSON.stringify({ start: rec.start, ev: rec.ev, th: rec.th, end: rec.end, total: rec.total, wait: rec.wait, tools: rec.tools, feel: rec.feel, obey: rec.obey, ignore: rec.ignore, pushed: rec.pushed }) };
     // text/plain keeps the browser from asking permission first; the script reads it as JSON
     fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(row) }).catch(() => {});
   }
@@ -1638,7 +1639,7 @@ const Archive = (() => {
     mine = {
       at: Date.now(), dur: Math.max(1, Math.floor((performance.now() - state.t0) / 1000)), corr: state.corrections,
       lv: state.tiles.map((t, i) => qz(flaw(e[i], tol))), fixes: state.tiles.map(t => t.fixes), tl: ARCH.timeline.slice(), last: ARCH.lastNote,
-      ocd: state.ocd || 'skip', name: ARCH.name || '', end: ARCH.end || 'idle', feel: ARCH.feel || null,   // how right it felt, 1–5, their own answer
+      ocd: state.ocd || 'skip', name: ARCH.name || '', end: ARCH.end || 'idle', feel: ARCH.feel || null, obey: ARCH.obey, ignore: ARCH.ignore, pushed: ARCH.pushed,   // what you did with the thoughts; feel: how right it felt, 1–5, their own answer
       tools: Tools.summary(),                                                                            // [times picked up or moved, seconds out] per tool
       total: Math.max(1, Math.floor(onBoard())),                                                       // the timer, when it stopped
       wait: state.started && ARCH.shownAt ? +Math.max(0, (state.t0 - ARCH.shownAt) / 1000).toFixed(1) : null,   // seconds before the first touch
@@ -2954,7 +2955,10 @@ const Voice = (() => {
   const caret = document.createElement('span'); caret.className = 'caret';
   let n = 0, typing = null, typingText = '';
   // 0 → 1 over the first three minutes: everything comes faster, and stops waiting its turn
-  const pace = () => state.started ? Math.min(1, (performance.now() - state.t0) / 90000) : 0;
+  /* how loud it is: a little from time, mostly from how much you've refused it.
+     Do what a thought asks and it goes quiet for a while; ignore it or push it away and it gets louder. */
+  let heat = 0, quietUntil = 0;
+  const pace = () => state.started ? Math.min(1, Math.min(1, (performance.now() - state.t0) / 120000) * .35 + heat) : 0;
   const said = [];   // every thought so far — they come back
 
   let cur = null, timers = [], lastAt = 0, lastInput = performance.now();
@@ -3005,8 +3009,10 @@ const Voice = (() => {
     el.style.left = `${Math.round(Math.min(innerWidth - w - 12, Math.max(12, x)))}px`;
     el.style.top = `${Math.round(Math.min(innerHeight - h - 12, Math.max(12, y)))}px`;
     el._lines = lines; el._tile = tile;
+    if (tile) el.dataset.tile = state.tiles.indexOf(tile);
+    if (tile && !state.ended) el._due = setTimeout(() => ignored(el), Math.max(3500, 7000 - heat * 3000));
     ARCH.lastNote = lines.map(l => l[1]).join(' ');
-    el.querySelector('.note-x').addEventListener('click', ev => { ev.stopPropagation(); el.remove(); rebound(el); });
+    el.querySelector('.note-x').addEventListener('click', ev => { ev.stopPropagation(); clearTimeout(el._due); el.remove(); ARCH.pushed++; heat = Math.min(1.2, heat + .07); rebound(el); });
     layer.appendChild(el);
     // measure the note with its full text, so it never runs off the screen
     spans.forEach((sp, k) => { sp.textContent = lines[k][1]; });
@@ -3014,14 +3020,14 @@ const Voice = (() => {
     el.style.left = `${Math.round(Math.min(innerWidth - fw - 12, Math.max(12, parseFloat(el.style.left))))}px`;
     el.style.top = `${Math.round(Math.min(innerHeight - fh - 12, Math.max(12, parseFloat(el.style.top))))}px`;
     spans.forEach(sp => { sp.textContent = ''; });
-    while (layer.children.length > 260) layer.firstChild.remove();
+    while (layer.children.length > 70) { clearTimeout(layer.firstChild._due); layer.firstChild.remove(); }
     return spans;
   }
   /* pushing a thought away: usually it goes. About one time in three it comes back a few
      seconds later, somewhere else — and now and then it comes back twice. */
   function rebound(el) {
     const back = el._back || 0;
-    if (state.ended || Math.random() > .33 / (1 + back)) return;
+    if (state.ended || Math.random() > (.33 + heat * .4) / (1 + back)) return;
     setTimeout(() => {
       if (state.ended || state.locked) return;
       const copies = Math.random() < .3 ? 2 : 1;
@@ -3032,6 +3038,33 @@ const Voice = (() => {
         fast(spans, texts);
       }
     }, rand(1800, 5000));
+  }
+  // left alone, a thought doesn't fade: it says it again, somewhere else, and louder
+  function ignored(el) {
+    if (!el.isConnected || el._done || state.ended || state.locked) return;
+    el._done = true; ARCH.ignore++;
+    heat = Math.min(1.2, heat + .14);
+    const gen = (el._gen || 0) + 1;
+    if (gen > 2) return;                                   // it says the same thing twice more at most, then waits for something new
+    const copies = gen === 1 && heat > .6 && Math.random() < heat - .4 ? 2 : 1;
+    for (let c = 0; c < copies; c++) {
+      const texts = el._lines.map(l => l[1]);
+      fast(note(el._lines, el._tile), texts);
+      layer.lastChild._gen = gen;
+    }
+  }
+  // you did what it asked: that thought goes, and for a little while it's quiet
+  function touched(tile) {
+    let any = false;
+    for (const el of [...layer.children]) {
+      if (el._tile !== tile || el._done) continue;
+      el._done = true; clearTimeout(el._due); any = true;
+      el.classList.add('gone'); setTimeout(() => el.remove(), 460);
+    }
+    if (!any) return;
+    ARCH.obey++;
+    heat = Math.max(0, heat - .18);
+    quietUntil = performance.now() + 2500 + Math.random() * 2500;
   }
   // how much of the screen the notes already cover (0–1, overlaps counted loosely)
   function covered() {
@@ -3071,14 +3104,15 @@ const Voice = (() => {
 
   function say(cat, tile, force) {
     if (cat !== 'demo' && !VOICE_LINES[cat]) return;
-    if (!force && SOMETIMES.has(cat) && Math.random() > .65) return;
+    if (!force && SOMETIMES.has(cat) && Math.random() > .22 + heat * .6) return;   // calm: now and then. Refused: all the time
     if (!force && (state.locked || state.ritual || !state.started)) return;
+    if (!force && performance.now() < quietUntil) return;   // the relief after giving in
     const now = performance.now(), pr = VOICE_PRIORITY[cat] || 1;
     const P = pace();
     if (!force && now - (lastCat[cat] || -1e9) < (VOICE_EVERY[cat] || 0) * (1 - .85 * P)) return;
     if (cur && pr <= cur.pr) {                                 // a louder thought is already speaking…
       // …but later on, thoughts stop waiting their turn and pile up on top of each other
-      if (!force && Math.random() < .45 + P * .55) { lastCat[cat] = now; quick(cat, tile); }
+      if (!force && heat > .45 && Math.random() < heat - .3) { lastCat[cat] = now; quick(cat, tile); }
       return;
     }
     const gap = 500 * (1 - .8 * P);
@@ -3131,7 +3165,7 @@ const Voice = (() => {
     }, 0);
   }
 
-  return { say, hush, poke, revisit };
+  return { say, hush, poke, revisit, touched };
 })();
 
 /* ======================================================
