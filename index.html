@@ -1647,8 +1647,10 @@ const Archive = (() => {
     };
     mine.left = mine.lv.filter(x => x !== STRAIGHT).length;
     const c = checks(mine, 0); mine.chk = c ? c.n : 0;
-    if (MODE === 'live' && SHEET_URL && !ARCH.preview) Remote.send(mine);
-    if (!ARCH.preview) {
+    // named "check": a test run. You see everything, but nothing is kept — not in the sheet, not on this computer
+    const testing = /^\s*check\s*$/i.test(ARCH.name || '');
+    if (MODE === 'live' && SHEET_URL && !ARCH.preview && !testing) Remote.send(mine);
+    if (!ARCH.preview && !testing) {
       const all = load(); all.unshift(mine);
       all.forEach((r, k) => { if (k >= 60) { delete r.ev; delete r.th; } });   // only the latest sixty keep their whole session
       store(all.slice(0, 400));
