@@ -2934,9 +2934,9 @@ $('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5);
 /* Thoughts, not commentary. They don't tell you how you're doing — they pull at you.
    body: lands on a tile you haven't touched yet, as if it hurts.  sym: after you touch one, it has to be evened out.
    loop: when you keep going back — nothing you did counts. */
-const SYM = ['Touch it again so it’s equal on both sides.', 'You touched the left one. Now the right one.', 'You turned it twice. Turn it twice the other way.', 'It has to be even.', 'That one got more attention. Not fair.'];
-const LOOP = ['Again. Properly this time.', 'That one didn’t count.', 'Start over. In the right order.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.'];
-const BODY = ['This one really hurts.', 'I can feel this one in my teeth.', 'This one is itching.', 'Can’t you feel that one?', 'That one is looking at me.', 'It’s pulling. Over here.', 'This one won’t let me breathe.'];
+const SYM = ['Touch it again so it’s equal on both sides.', 'You touched the left one. Now the right one.', 'You turned it twice. Turn it twice the other way.', 'It has to be even.', 'That one got more attention. Not fair.', 'Now the same on the other side.', 'Even it out.', 'It’s heavier on the left now.', 'Both sides. The same.', 'One more, so it matches.'];
+const LOOP = ['Again. Properly this time.', 'That one didn’t count.', 'Start over. In the right order.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.', 'From the beginning.', 'Not like that. Again.', 'Slower this time.', 'Wait. Do it again.', 'You lost count. Again.'];
+const BODY = ['This one really hurts.', 'I can feel this one in my teeth.', 'This one is itching.', 'Can’t you feel that one?', 'That one is looking at me.', 'It’s pulling. Over here.', 'This one won’t let me breathe.', 'This one is too loud.', 'That one is pressing on me.', 'I can’t look at that one.'];
 const both = a => ({ early: a, late: a });
 const VOICE_LINES = {
   perfect: both(SYM), check: both(SYM), near: both(SYM), better: both(SYM), worse: both(SYM), tug: both(SYM), break: both(SYM),
@@ -2963,6 +2963,8 @@ const Voice = (() => {
   const pace = () => state.started ? Math.min(1, Math.min(1, (performance.now() - state.t0) / 240000) * .3 + heat) : 0;
   const GRACE = 8000;   // the first seconds are yours: no thoughts yet, just the board
   const open = () => [...layer.children].filter(el => !el._done && !el.classList.contains('gone')).length;
+  const shown = () => [...layer.children].filter(el => !el.classList.contains('gone')).length;
+  const room = () => shown() < Math.min(10, 3 + Math.floor(heat * 8));   // never a wall of notes: at most ten, and only that many if you keep refusing
   const said = [];   // every thought so far — they come back
 
   let cur = null, timers = [], lastAt = 0, lastInput = performance.now();
@@ -2974,9 +2976,12 @@ const Voice = (() => {
     const P = pace(), tier = P > .35 && Math.random() < P ? 'late' : 'early';
     const src = VOICE_LINES[cat][tier];   // categories that share lines share one bag, so nothing repeats back to back
     if (!bagOf.get(src) || !bagOf.get(src).length) bagOf.set(src, [...src].sort(() => Math.random() - .5));
+    const onScreen = new Set([...layer.children].filter(el => !el.classList.contains('gone')).map(el => (el._lines || []).map(l => l[1]).join(' ')));
     let t = bagOf.get(src).pop();
-    // later on it starts repeating itself inside a single thought
-    if (P > .6 && Math.random() < (P - .6) * 1.2) t = `${t} ${t}`;
+    for (let k = 0; k < 3 && onScreen.has(t); k++) {
+      if (!bagOf.get(src).length) bagOf.set(src, [...src].sort(() => Math.random() - .5));
+      t = bagOf.get(src).pop();
+    }
     return t;
   }
   function fill(t) {
@@ -3016,7 +3021,7 @@ const Voice = (() => {
     if (tile) el.dataset.tile = state.tiles.indexOf(tile);
     if (tile && !state.ended) el._due = setTimeout(() => ignored(el), Math.max(4500, 8500 - heat * 4000));
     ARCH.lastNote = lines.map(l => l[1]).join(' ');
-    el.querySelector('.note-x').addEventListener('click', ev => { ev.stopPropagation(); clearTimeout(el._due); el.remove(); ARCH.pushed++; heat = Math.min(1.2, heat + .05); rebound(el); });
+    el.querySelector('.note-x').addEventListener('click', ev => { ev.stopPropagation(); clearTimeout(el._due); el.remove(); ARCH.pushed++; heat = Math.min(1, heat + .05); rebound(el); });
     layer.appendChild(el);
     // measure the note with its full text, so it never runs off the screen
     spans.forEach((sp, k) => { sp.textContent = lines[k][1]; });
@@ -3031,10 +3036,10 @@ const Voice = (() => {
      seconds later, somewhere else — and now and then it comes back twice. */
   function rebound(el) {
     const back = el._back || 0;
-    if (state.ended || Math.random() > (.33 + heat * .4) / (1 + back)) return;
+    if (state.ended || back >= 1 || Math.random() > .2 + heat * .25) return;
     setTimeout(() => {
-      if (state.ended || state.locked) return;
-      const copies = Math.random() < .3 ? 2 : 1;
+      if (state.ended || state.locked || !room()) return;
+      const copies = 1;
       for (let c = 0; c < copies; c++) {
         const texts = el._lines.map(l => l[1]);
         const spans = note(el._lines, Math.random() < .5 ? el._tile : null);
@@ -3047,10 +3052,14 @@ const Voice = (() => {
   function ignored(el) {
     if (!el.isConnected || el._done || state.ended || state.locked) return;
     el._done = true; ARCH.ignore++;
-    heat = Math.min(1.2, heat + .09);
+    heat = Math.min(1, heat + .08);
     const gen = (el._gen || 0) + 1;
-    if (gen > 2) return;                                   // it says the same thing twice more at most, then waits for something new
-    const copies = gen === 1 && heat > .6 && Math.random() < heat - .4 ? 2 : 1;
+    // the thought doesn't stay put: it leaves this spot and turns up somewhere else.
+    // an old, ignored thought eventually fades on its own, so the screen never turns into a wall
+    const fade = (n, after) => setTimeout(() => { if (!n.isConnected) return; n.classList.add('gone'); setTimeout(() => n.remove(), 460); }, after);
+    fade(el, gen > 1 ? 18000 : 1200);
+    if (gen > 1) return;                                   // it says the same thing once more, then waits for something new
+    const copies = 1;
     for (let c = 0; c < copies; c++) {
       const texts = el._lines.map(l => l[1]);
       fast(note(el._lines, el._tile), texts);
@@ -3112,7 +3121,7 @@ const Voice = (() => {
     if (!force && (state.locked || state.ritual || !state.started)) return;
     if (!force && performance.now() - state.t0 < GRACE) return;
     if (!force && performance.now() < quietUntil) return;   // the relief after giving in
-    if (!force && open() >= 3 + Math.floor(heat * 10)) return;   // how many can be open at once grows only as you refuse them
+    if (!force && !room()) return;   // how many can be open at once grows only as you refuse them
     const now = performance.now(), pr = VOICE_PRIORITY[cat] || 1;
     const P = pace();
     if (!force && now - (lastCat[cat] || -1e9) < (VOICE_EVERY[cat] || 0) * (1 - .85 * P)) return;
@@ -3138,7 +3147,7 @@ const Voice = (() => {
     if (!state.started || state.locked || state.ritual) return;
     const now = performance.now();
     const fresh = state.tiles.filter(t => !t.fixes && t.el.isConnected);   // tiles you haven't touched yet
-    heat = Math.max(0, heat - .004);   // left in peace for a while, it slowly settles
+    if (!open()) heat = Math.max(0, heat - .008);   // left in peace, it slowly settles   // left in peace for a while, it slowly settles
     if (now - state.t0 < GRACE) return;
     if (now - lastInput > 5000) { if (Math.random() < .25) say('idle'); else if (fresh.length && Math.random() < .6) say('body', pick(fresh)); }
     else if (fresh.length && Math.random() < .08 + pace() * .14) say('body', pick(fresh));   // now and then, one you haven't touched calls to you
@@ -3150,13 +3159,14 @@ const Voice = (() => {
   function revisit(tile) {
     const now = performance.now(), P = pace();
     const old = (tile.thoughts || []).filter(t => now - t[1] > 10000 * (1 - .8 * P));   // something you thought on an earlier visit
-    if (!old.length || state.locked || now - lastEcho < 1500 * (1 - .85 * P)) return;
+    if (!old.length || state.locked || !room() || now - lastEcho < 6000 * (1 - .5 * P)) return;
     lastEcho = now;
     const [x] = pick(old);
     fast(note([['v', x]], tile), [x]);
   }
   // a thought that doesn't wait for the one before it to finish
   function quick(cat, tile) {
+    if (!room()) return;
     const x = fill(draw(cat));
     if (tile) (tile.thoughts = tile.thoughts || []).push([x, performance.now()]);
     fast(note([['v', x]], tile), [x]);
