@@ -205,6 +205,8 @@ body.harmony .zoomer{opacity:0;pointer-events:none}
 
 /* thoughts as notes: dropped anywhere on the screen, each one can be closed */
 .notes{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity 1100ms ease}
+.leads{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;overflow:visible}
+.leads path{stroke:rgba(20,20,20,.45);stroke-width:1;stroke-dasharray:3 3;fill:none}
 .note{
   position:absolute;pointer-events:none;box-sizing:border-box;cursor:default;   /* you can reach the tile underneath: a thought blocks the view, not your hand */
   background:var(--bg);padding:7px 12px 10px;
@@ -217,7 +219,7 @@ body.harmony .zoomer{opacity:0;pointer-events:none}
 .note-x:hover{color:var(--ink)}
 .note.gone{opacity:0;transform:scale(.96);transition:opacity 450ms ease,transform 450ms ease}
 .note .ln{display:block;width:auto;max-width:none;background:none;padding:0;white-space:pre-wrap;word-break:break-word}
-body.harmony .notes{opacity:.12}
+body.harmony .notes,body.harmony .leads{opacity:.12}
 body.harmony .log{opacity:.12}
 
 
@@ -2118,7 +2120,7 @@ const Archive = (() => {
     const tx0 = V.x + (wx + PAD) * V.z, ty0 = V.y + (wy + PAD) * V.z, tw = COLS * TS * V.z;
     const s = tw / gr.width;
     stageEl.style.zIndex = 40; stageEl.style.pointerEvents = 'none';
-    document.querySelectorAll('.chrome, .clock, .zoomer, .notes').forEach(e => { e.style.transition = 'opacity 600ms ease'; e.style.opacity = 0; });
+    document.querySelectorAll('.chrome, .clock, .zoomer, .notes, .leads').forEach(e => { e.style.transition = 'opacity 600ms ease'; e.style.opacity = 0; });
     frameEl.style.transformOrigin = '0 0';
     frameEl.style.transition = 'transform 1700ms cubic-bezier(.65,0,.25,1)';
     requestAnimationFrame(() => {
@@ -2936,9 +2938,9 @@ $('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5);
 /* Thoughts, not commentary. They don't tell you how you're doing — they pull at you.
    body: lands on a tile you haven't touched yet, as if it hurts.  sym: after you touch one, it has to be evened out.
    loop: when you keep going back — nothing you did counts. */
-const SYM = ['Touch it again so it’s equal on both sides.', 'You touched the left one. Now the right one.', 'You turned it twice. Turn it twice the other way.', 'It has to be even.', 'That one got more attention. Not fair.', 'Now the same on the other side.', 'Even it out.', 'It’s heavier on the left now.', 'Both sides. The same.', 'One more, so it matches.'];
-const LOOP = ['Again. Properly this time.', 'That one didn’t count.', 'Left to right. Start again.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.', 'From the beginning.', 'Not like that. Again.', 'Slower this time.', 'Wait. Do it again.', 'You lost count. Again.'];
-const BODY = ['This one really hurts.', 'I can feel this one in my teeth.', 'This one is itching.', 'Can’t you feel that one?', 'That one is looking at me.', 'It’s pulling. Over here.', 'This one won’t let me breathe.', 'This one is too loud.', 'That one is pressing on me.', 'I can’t look at that one.'];
+const SYM = ['Touch it again so it’s equal on both sides.', 'Touch this one once more.', 'You turned it twice. Turn it twice the other way.', 'It has to be even.', 'This one got more attention. Not fair.', 'Now the same on the other side.', 'Even it out.', 'It’s heavier on the left now.', 'Both sides. The same.', 'One more, so it matches.'];
+const LOOP = ['Again. Properly this time.', 'This one didn’t count.', 'Left to right. Start again.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.', 'From the beginning.', 'Not like that. Again.', 'Slower this time.', 'Wait. Do it again.', 'You lost count. Again.'];
+const BODY = ['This one really hurts.', 'I can feel this one in my teeth.', 'This one is itching.', 'Can’t you feel this one?', 'This one is looking at me.', 'It’s pulling. Over here.', 'This one won’t let me breathe.', 'This one is too loud.', 'This one is pressing on me.', 'I can’t look at this one.'];
 const both = a => ({ early: a, late: a });
 const VOICE_LINES = {
   perfect: both(SYM), check: both(SYM), near: both(SYM), better: both(SYM), worse: both(SYM), tug: both(SYM), break: both(SYM),
@@ -2956,6 +2958,8 @@ const Voice = (() => {
   layer.className = 'notes';
   layer.setAttribute('aria-live', 'polite');
   document.body.appendChild(layer);
+  const leads = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  leads.setAttribute('class', 'leads'); document.body.insertBefore(leads, layer);
   const caret = document.createElement('span'); caret.className = 'caret';
   let n = 0, typing = null, typingText = '';
   // 0 → 1 over the first three minutes: everything comes faster, and stops waiting its turn
@@ -3150,6 +3154,17 @@ const Voice = (() => {
   setInterval(() => {
     const asked = new Set([...layer.children].filter(el => el._tile && !el.classList.contains('gone')).map(el => el._tile));
     state.tiles.forEach(t => t.el.classList.toggle('called', asked.has(t)));
+    // the line runs from the edge of the note to the edge of its tile
+    let d = '';
+    for (const el of layer.children) {
+      if (!el._tile || el.classList.contains('gone') || !el._tile.el.isConnected) continue;
+      const a = el.getBoundingClientRect(), b = el._tile.el.getBoundingClientRect();
+      const bx = b.left + b.width / 2, by = b.top + b.height / 2;
+      const ax = Math.min(a.right, Math.max(a.left, bx)), ay = by < a.top ? a.top : by > a.bottom ? a.bottom : (a.top + a.bottom) / 2;
+      const tx = Math.min(b.right - 3, Math.max(b.left + 3, ax)), ty = Math.min(b.bottom - 3, Math.max(b.top + 3, ay));
+      if (Math.hypot(tx - ax, ty - ay) > 2) d += `M${ax.toFixed(1)} ${ay.toFixed(1)}L${tx.toFixed(1)} ${ty.toFixed(1)}`;
+    }
+    leads.innerHTML = d ? `<path d="${d}"/>` : '';
   }, 250);
   // silence is also a trigger
   setInterval(() => {
