@@ -957,6 +957,7 @@ function bind(tile) {
       const i = state.tiles.indexOf(tile), e = Math.abs(computeErrors()[i]), tol = LV().tol;
       const e1 = computeErrors(), depMoved = d.dep >= 0 && Math.abs(e1[d.dep]) - d.d0 > tol * 4;
       if (state.sameCount >= 4) Voice.say('stuck', tile);
+      else if (tile.perfect) Voice.say('perfect', tile);
       else if (!tile.perfect && e < tol * 3.5) Voice.say('near', tile);
       else if (depMoved && Math.random() < .5) Voice.say('tug', state.tiles[d.dep]);
       else if (!tile.perfect && e > d.e0 + tol) Voice.say('worse', tile);
@@ -2927,54 +2928,56 @@ $('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5);
    Not insults: doubt, urgency, the feeling that something is still off.
    Every line is set off by something you just did, and it gets more insistent over time.
    ====================================================== */
+/* The voice lies. Sometimes it doubts a tile that is right, sometimes it praises one that is off,
+   sometimes it tells the truth — so it can never be used to tell how you're doing, and it can never be ignored. */
 const VOICE_LINES = {
-  perfect: {                // you got a tile right
-    early: ['Is it, though?', 'Look again.', 'Are you sure?', 'Something is still off.', 'It doesn’t feel right.'],
-    late:  ['It moved. Did you see it move?', 'Not quite. Not quite.', 'You’ll know if you leave it.', 'Check it once more.', 'It feels wrong. It feels wrong.']
+  perfect: {                // you got a tile right — it won't let you have it
+    early: ['Is it, though?', 'That one’s off.', 'Look at the left edge.', 'Turn it once more. Just once.', 'It was better before.'],
+    late:  ['It moved while you were looking at it.', 'Wrong. You know it’s wrong.', 'Anyone else would see it.', 'You’re not leaving it like that.', 'Off. It’s off.']
   },
   check: {                  // you touched a tile that was already right
-    early: ['Just to be sure.', 'Did it move?', 'Check it. Just in case.', 'One more look.'],
-    late:  ['What if it moved while you weren’t looking?', 'You can’t be sure.', 'Again. Just to be sure.', 'You looked. Look again.']
+    early: ['Check the one next to it too.', 'Did you check it properly?', 'Once more, then you can stop.', 'You missed something.'],
+    late:  ['You checked it wrong.', 'That didn’t count. Again.', 'What if this is the one?', 'You already know you’ll come back to it.']
   },
   break: {                  // your fix broke one that was right
-    early: ['That one was fine.', 'You moved it.', 'Now that one is wrong.', 'It was right. Wasn’t it?'],
-    late:  ['Now it’s wrong again.', 'Fix it before it gets worse.', 'It’s spreading.']
+    early: ['Now look what you did.', 'That was the only right one.', 'You ruined it.', 'Put it back. Exactly how it was.'],
+    late:  ['You can’t remember how it was.', 'You keep breaking it.', 'It’s spreading because of you.']
   },
-  near: {                   // you let go a hair off
-    early: ['It’s off. Just slightly.', 'Can you see it?', 'Almost isn’t right.', 'You’re leaving it like that?'],
-    late:  ['You can feel it from here.', 'It’s still there.', 'Off. Off. Off.', 'You won’t stop thinking about it.']
+  near: {                   // a hair off — it tells you it's fine
+    early: ['Perfect. Leave it.', 'That’s it.', 'Nobody would notice.', 'Good enough?'],
+    late:  ['That’s right. Isn’t it?', 'Leave it. Leave it. No —', 'It’s fine. It’s fine. It’s not fine.', 'You’ll notice it later.']
   },
   stuck: {                  // the same tile, again and again
-    early: ['Again.', 'Once more. Then it’ll feel right.', '{n} times. Still not right.', 'This one.'],
-    late:  ['Again. Again.', 'It has to feel right.', '{n} times and it still doesn’t feel right.', 'Until it feels right.']
+    early: ['Again.', '{n} times. One more.', 'The next one will be right.', 'This time for real.'],
+    late:  ['{n}. Make it an even number.', 'Again. Again. Again.', 'It has to feel right. It doesn’t.', 'You can stop whenever you want.']
   },
-  better: {                 // better, not right
-    early: ['Closer. Not there.', 'Not yet.', 'Still not right.'],
-    late:  ['Not yet. Not yet.', 'Keep going.', 'Closer isn’t right.']
+  better: {                 // closer, not right
+    early: ['Not that way.', 'Closer? Are you sure?', 'Almost. Almost is worse than off.', 'Other way.', 'You overdid it.', 'Hm.'],
+    late:  ['Almost is the worst.', 'Not yet. Not yet.', 'Keep going. Don’t stop.', 'You were closer a second ago.', 'Too far. Not far enough.']
   },
-  worse: {                  // you made it worse
-    early: ['Wrong way.', 'Further away.', 'Go back.'],
-    late:  ['Go back. Go back.', 'Now it’s worse.', 'Undo it.']
+  worse: {                  // you made it worse — it cheers you on
+    early: ['Better.', 'Yes. Like that.', 'Keep turning.', 'Good. A little more.', 'Almost there.', 'There.'],
+    late:  ['Better. No.', 'Further. Go on.', 'That’s what you wanted, right?', 'You’re so close.', 'Don’t stop now.']
   },
   tug: {                    // the fix moved its partner
-    early: ['Something moved over there.', 'Did you see that?', 'That one changed.'],
-    late:  ['Everything you fix moves something else.', 'Over there. Look.', 'What else moved?']
+    early: ['Something moved behind you.', 'Did you see that?', 'Not that one. The other one.'],
+    late:  ['Everything you touch moves something else.', 'Look. Over there. No, there.', 'Which one did you just break?']
   },
   almost: {                 // one left
-    early: ['One left.', 'Don’t leave it now.'],
-    late:  ['Just one. Just one.', 'Finish it.']
+    early: ['One left. Or is it?', 'Count them again.'],
+    late:  ['Are you sure it’s only one?', 'Start again from the top. Just to be sure.']
   },
   idle: {                   // you stopped
-    early: ['You’re leaving it like this?', 'It’s still not right.', 'Just one more.', 'What if you stop now?'],
-    late:  ['You can feel it. Can’t you?', 'It’s still there. It’s still there.', 'You won’t be able to stop thinking about it.']
+    early: ['Why did you stop?', 'You’re giving up on it?', 'It’s still there.', 'Just one more.'],
+    late:  ['You’ll think about this tonight.', 'You know which one it is.', 'Other people finish this.', 'It’s still there. It’s still there.']
   },
   long: {                   // the time you have spent
-    early: ['{time}. Still not right.', '{corr} corrections.'],
-    late:  ['{time}. Just a little longer.', 'You were going to do something else.']
+    early: ['{time}. Still not right.', '{corr} corrections. None of them stuck.'],
+    late:  ['{time}. You were supposed to be somewhere.', 'Just a little longer. You said that before.']
   },
   expand: {                 // the board comes undone
-    early: ['Of course.', 'Start again.', 'It wasn’t right.'],
-    late:  ['Again. From the beginning.', 'It never felt right.']
+    early: ['Of course.', 'You knew it would.', 'From the beginning.'],
+    late:  ['Again. All of it.', 'It was never right.']
   }
 };
 // not every touch gets a thought — it lands harder when you can't predict it
@@ -3106,7 +3109,6 @@ const Voice = (() => {
   }
 
   function say(cat, tile, force) {
-    return;   // no notes during the game: nothing tells you how you're doing
     if (cat !== 'demo' && !VOICE_LINES[cat]) return;
     if (!force && SOMETIMES.has(cat) && Math.random() > .65) return;
     if (!force && (state.locked || state.ritual || !state.started)) return;
