@@ -384,6 +384,7 @@ body.peek.focus-panel .arch-home{display:none}
 .arch-head{position:fixed;left:50%;top:44px;transform:translateX(-50%);z-index:31;text-align:center;pointer-events:none;opacity:0;transition:opacity 900ms ease;width:min(900px,calc(100vw - 260px))}
 .arch-head h2{margin:0;font-weight:500;font-size:clamp(24px,2.6vw,36px);letter-spacing:-.015em;line-height:1.1;color:var(--ink)}
 .arch-head p{margin:10px 0 0;font-size:12px;color:var(--mute);letter-spacing:.02em}
+.arch-head p.t{margin-top:4px}
 body.arch-on .arch-head{opacity:1}
 body.focus-panel .arch-head,body.view-lines .arch-head{opacity:0}
 .arch-view{position:fixed;left:36px;top:28px;z-index:33;display:flex;flex-direction:column;gap:6px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
@@ -405,6 +406,8 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 /* the archive, sorted by what people said */
 .arch-ocd{position:fixed;right:36px;bottom:32px;z-index:31;display:flex;flex-direction:column;align-items:flex-start;gap:7px;opacity:0;pointer-events:none;transition:opacity 700ms ease}
 .arch-ocd.on{opacity:1;pointer-events:auto}
+.arch-demo{font-size:10px;line-height:1.5;letter-spacing:.04em;color:var(--mute);max-width:190px;margin-bottom:6px}
+.arch-demo b{font-weight:500;color:var(--ink)}
 /* a small key: a square of colour and what it means. Click one to see only them; click it again for everyone. */
 .arch-ocd button{font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:none;border:0;padding:0;color:var(--mute);cursor:pointer;display:flex;align-items:center;gap:8px;transition:color 200ms,opacity 200ms}
 .arch-ocd button[data-f="all"]{display:none}
@@ -502,7 +505,7 @@ body.focus-panel .arch-view{opacity:0;pointer-events:none}
 <button class="arch-home" id="archHome" title="Back to the start" aria-label="Back to the start"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M2.5 7.5 8 2.5l5.5 5"/><path d="M4 6.5v7h3v-4h2v4h3v-7"/></svg></button>
 <div class="arch-view" id="archView"><button data-v="boards" class="sel" title="Boards" aria-label="Boards"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="2.5" width="5.5" height="4"/><rect x="9" y="2.5" width="5.5" height="4"/><rect x="1.5" y="9.5" width="5.5" height="4"/><rect x="9" y="9.5" width="5.5" height="4"/></svg></button><button data-v="hands" title="Lines" aria-label="Lines"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h10M2 6.3h13M7 9.6h8M4 12.9h11"/></svg></button></div>
 <div class="arch-stat" id="archStat"></div>
-<div class="arch-ocd" id="archOcd"><button data-f="all" class="sel">Everyone</button><button data-f="yes">OCD</button><button data-f="maybe">Don’t know</button><button data-f="no">No OCD</button><button data-f="skip">Rather not say</button></div>
+<div class="arch-ocd" id="archOcd"><div class="arch-demo" id="archDemo"></div><button data-f="all" class="sel">Everyone</button><button data-f="yes">OCD</button><button data-f="maybe">Don’t know</button><button data-f="no">No OCD</button><button data-f="skip">Rather not say</button></div>
 <div class="arch-zoom" id="archZoom"><button id="azIn" aria-label="Zoom in">+</button><button id="azOut" aria-label="Zoom out">−</button></div>
 <aside class="arch-panel" id="archPanel" aria-live="polite"></aside>
 
@@ -1553,7 +1556,7 @@ const Archive = (() => {
   const qz = f => { let b = 0; LEVEL.forEach((l, k) => { if (Math.abs(l - f) < Math.abs(LEVEL[b] - f)) b = k; }); return f && b === STRAIGHT ? (f > 0 ? 5 : 3) : b; };
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
   const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} };
-  const feelText = r => (r === mine && YOU ? `<span class="ap-you">${YOU.h}${YOU.p ? ` ${YOU.p}` : ''}</span>` : '') + (typeof r.feel === 'number' ? `${r === mine ? 'To you it felt' : 'To them it felt'} <b>${r.feel}</b> of 5 right.` : '');
+  const feelText = r => (r === mine && YOU ? `<span class="ap-you">${YOU.h}${YOU.p ? ` ${YOU.p}` : ''}${YOU.t ? ` ${YOU.t}` : ''}</span>` : '') + (typeof r.feel === 'number' ? `${r === mine ? 'To you it felt' : 'To them it felt'} <b>${r.feel}</b> of 5 right.` : '');
   const endChoice = r => !r.end ? '' : `<span class="ap-btn${r.end === 'done' ? ' on' : ''}">I’m done</span><span class="ap-btn${r.end === 'gave_up' ? ' on' : ''}">I give up</span>${r.end === 'idle' ? `<i>${r === mine ? 'You' : 'They'} pressed neither — ${r === mine ? 'you' : 'they'} stopped touching it.</i>` : ''}`;
   const endText = r => (r === mine ? { done: 'You said you were done.', gave_up: 'You gave up.', idle: 'You stopped touching it.' } : { done: 'Said they were done.', gave_up: 'Gave up.', idle: 'Stopped touching it.' })[r.end] || '';
   const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -1564,6 +1567,11 @@ const Archive = (() => {
     const nm = { ruler: 'ruler', level: 'level', lens: 'magnifier', grid: 'grid' };
     const used = Object.keys(nm).filter(k => r.tools[k] && r.tools[k][0] > 0);
     return used.length ? 'Reached for ' + used.map(k => `the ${nm[k]} ${r.tools[k][0]}×`).join(' · ') : 'Used no tools';
+  };
+  const thoughtText = r => {
+    if (typeof r.obey !== 'number') return '';
+    const o = r.obey, n = (r.ignore || 0) + (r.pushed || 0), w = r === mine ? 'you' : 'they';
+    return `When the thoughts asked, ${w} gave in <b>${o}</b> ${o === 1 ? 'time' : 'times'} and refused <b>${n}</b>.`;
   };
   const timeText = r => `${mmss(r.total || r.dur)} on the board${typeof r.wait === 'number' ? ` · first touch after ${mmss(r.wait)}` : ''} · ${r.corr.toLocaleString('en')} corrections`;
   const fmtAt = t => { const d = new Date(t); return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -1693,7 +1701,7 @@ const Archive = (() => {
       const x = V.x + rec._gx * CW * z, y = V.y + rec._gy * CH * z;
       if (x > W || y > H || x + BW * z < 0 || y + BH * z < 0) continue;
       if (rec === mine && !mine.landed) { ctx.fillStyle = 'rgba(20,20,20,.05)'; ctx.fillRect(x, y, BW * z, BH * z); continue; }   // the empty place waiting for you
-      ctx.globalAlpha = cur >= 0 && i !== cur ? .14 : filt !== 'all' && rec.ocd !== filt && rec !== mine ? .1 : 1;
+      ctx.globalAlpha = (cur >= 0 && i !== cur ? .14 : filt !== 'all' && rec.ocd !== filt && rec !== mine ? .1 : 1) * (rec.demo && cur !== i ? .4 : 1);   // demo boards are faded: only real games are solid
       if (rec === mine || (i === hover && cur < 0)) {   // yours (and the one under your hand) sits a little above the rest — a soft shadow, no frame
         ctx.save(); ctx.shadowColor = 'rgba(20,20,20,.28)'; ctx.shadowBlur = Math.max(6, 10 * z); ctx.shadowOffsetY = Math.max(2, 3 * z);
         ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x, y, BW * z, BH * z); ctx.restore();
@@ -1860,12 +1868,16 @@ const Archive = (() => {
       cands.push(q >= .5 ? [q, `You looked for ${w} seconds before you touched anything.`] : [1 - q, `You started fixing within ${w} second${w === 1 ? '' : 's'}.`]);
     }
     cands.sort((a, b) => b[0] - a[0]);
-    return { h, p: cands.length ? cands[0][1] : '' };
+    const o = mine.obey || 0, n = (mine.ignore || 0) + (mine.pushed || 0);
+    const t = o + n === 0 ? '' : n === 0 ? `Every time a thought asked, you did it. ${o} ${o === 1 ? 'time' : 'times'}.`
+      : o === 0 ? `You refused every thought. ${n} ${n === 1 ? 'time' : 'times'}.`
+      : `You did what the thoughts asked ${o} ${o === 1 ? 'time' : 'times'}. You refused ${n}.`;
+    return { h, p: cands.length ? cands[0][1] : '', t };
   }
   function gapText() {
     const rs = list.filter(r => typeof r.feel === 'number');
     const el = $('archHead'); if (!el) return;
-    if (mine) { YOU = youText(); el.innerHTML = `<h2>${YOU.h}</h2>${YOU.p ? `<p>${YOU.p}</p>` : ''}`; return; }
+    if (mine) { YOU = youText(); el.innerHTML = `<h2>${YOU.h}</h2>${YOU.p ? `<p>${YOU.p}</p>` : ''}${YOU.t ? `<p class="t">${YOU.t}</p>` : ''}`; return; }
     el.innerHTML = ''; return;           // without a game of your own, the wall says nothing (the general sentences below are kept, unused)
     if (rs.length < 3) { el.innerHTML = ''; return; }
     let better = 0, worse = 0;
@@ -1992,7 +2004,7 @@ const Archive = (() => {
     return (rec._chk = { n: Math.min(n, of), of });
   }
   async function startPlay(i) {
-    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.innerHTML = endChoice(list[i]); const fe = $('apFeel'); if (fe && cur === i) fe.innerHTML = feelText(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); } }
+    if (list[i].remote && !list[i].ev) { const d = await Remote.detail(list[i].id); if (d) { Object.assign(list[i], d); const e = $('apEnd'); if (e && cur === i) e.innerHTML = endChoice(list[i]); const fe = $('apFeel'); if (fe && cur === i) fe.innerHTML = feelText(list[i]); const tm = $('apTime'); if (tm && cur === i) tm.textContent = timeText(list[i]); const tt = $('apTools'); if (tt && cur === i) tt.textContent = toolText(list[i]); const th = $('apThoughts'); if (th && cur === i) th.innerHTML = thoughtText(list[i]); } }
     if (cur !== i) return;
     const rec = list[i], s = rec.ev ? { start: rec.start || START(), ev: rec.ev, th: rec.th || [] } : rec.demo ? simulate(rec, i) : { start: rec.lv.slice(), ev: [], th: [] };
     play = { i, lv: s.start.slice(), ev: s.ev, th: s.th, k: 0, h: 0, t0: performance.now(), total: Math.min(15000, Math.max(6000, rec.dur * 25)), dur: rec.dur, flash: [], done: false };
@@ -2021,6 +2033,7 @@ const Archive = (() => {
       <div class="ap-feel" id="apFeel">${feelText(rec)}</div>
       <div class="ap-line-s" id="apTime">${timeText(rec)}</div>
       <div class="ap-line-s ap-tools" id="apTools">${toolText(rec)}</div>
+      <div class="ap-line-s" id="apThoughts">${thoughtText(rec)}</div>
       <div class="ap-sec"><div class="arch-k">Watching them try</div><div id="apLine"></div>
         <div class="ap-axis"><span>how much of it was right</span><button class="ap-again" id="apAgain">Watch again</button></div></div>
       ${(() => { const c = checks(rec, i); return c ? `<div class="ap-sec"><div class="arch-k">Fixing what wasn’t broken</div>
@@ -2104,6 +2117,8 @@ const Archive = (() => {
     save();
     if (MODE === 'live') remote = await Remote.withFeel(await Remote.list());
     layout();
+    $('archDemo').innerHTML = (() => { const real = list.filter(r => !r.demo).length, fake = list.length - real;
+      return fake ? `<b>${real}</b> real ${real === 1 ? 'game' : 'games'}. The ${fake} faded boards are demo data, made up to show the hypothesis.` : `<b>${real}</b> real ${real === 1 ? 'game' : 'games'}.`; })();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
     const mi = list.indexOf(mine);
     // the camera starts close, on the empty place that's waiting for you
@@ -2139,6 +2154,8 @@ const Archive = (() => {
     if (!sprites) sprites = makeSprites();
     if (MODE === 'live') remote = await Remote.withFeel(await Remote.list());
     layout();
+    $('archDemo').innerHTML = (() => { const real = list.filter(r => !r.demo).length, fake = list.length - real;
+      return fake ? `<b>${real}</b> real ${real === 1 ? 'game' : 'games'}. The ${fake} faded boards are demo data, made up to show the hypothesis.` : `<b>${real}</b> real ${real === 1 ? 'game' : 'games'}.`; })();
     cv = $('archCanvas'); ctx = cv.getContext('2d'); sizeCanvas(); wire();
     return ready().then(() => { warm(); setView(explore()); $('archive').classList.add('on'); $('archZoom').classList.add('on'); $('archOcd').classList.add('on'); $('archView').classList.add('on'); document.body.classList.add('arch-on'); });
   }
