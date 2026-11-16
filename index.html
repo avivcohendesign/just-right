@@ -109,6 +109,7 @@ body.harmony .zoomer{opacity:0;pointer-events:none}
 .tile.echo svg{animation:twitch 260ms ease infinite alternate}
 @keyframes twitch{to{transform:translateX(.6px)}}
 .tile.active::after{box-shadow:inset 0 0 0 1px rgba(20,20,20,.38)}
+.tile.called{outline:1.5px dashed rgba(20,20,20,.5);outline-offset:-3px}   /* a thought is asking for this one */
 .tile:focus-visible::after{box-shadow:inset 0 0 0 1.5px var(--ink)}
 .tile::before{display:none}
 .tile.snap svg{animation:settle 560ms cubic-bezier(.2,.7,.2,1)}
@@ -205,14 +206,14 @@ body.harmony .zoomer{opacity:0;pointer-events:none}
 /* thoughts as notes: dropped anywhere on the screen, each one can be closed */
 .notes{position:fixed;inset:0;z-index:4;pointer-events:none;transition:opacity 1100ms ease}
 .note{
-  position:absolute;pointer-events:auto;box-sizing:border-box;cursor:default;
+  position:absolute;pointer-events:none;box-sizing:border-box;cursor:default;   /* you can reach the tile underneath: a thought blocks the view, not your hand */
   background:var(--bg);padding:7px 12px 10px;
   box-shadow:0 0 0 1px rgba(20,20,20,.16),0 10px 24px -14px rgba(20,20,20,.35);
   font:12px/1.6 "SF Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 .note-h{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:10px;color:var(--mute);margin-bottom:3px}
 .note-h i{font-style:normal;letter-spacing:.08em;opacity:.6;font-variant-numeric:tabular-nums}
-.note-x{border:0;background:none;padding:0 0 0 6px;margin:-2px -4px 0 0;font:15px/1 "SF Mono",ui-monospace,Menlo,monospace;color:var(--mute);cursor:pointer}
+.note-x{pointer-events:auto;border:0;background:none;padding:0 0 0 6px;margin:-2px -4px 0 0;font:15px/1 "SF Mono",ui-monospace,Menlo,monospace;color:var(--mute);cursor:pointer}
 .note-x:hover{color:var(--ink)}
 .note.gone{opacity:0;transform:scale(.96);transition:opacity 450ms ease,transform 450ms ease}
 .note .ln{display:block;width:auto;max-width:none;background:none;padding:0;white-space:pre-wrap;word-break:break-word}
@@ -3071,12 +3072,14 @@ const Voice = (() => {
   function touched(tile) {
     let any = false;
     for (const el of [...layer.children]) {
-      if (el._tile !== tile || el._done) continue;
-      el._done = true; clearTimeout(el._due); any = true;
+      if (el.classList.contains('gone')) continue;
+      if (el._tile !== tile && el._tile) continue;            // a thought about no tile in particular is settled by touching any of them
+      el._done = true; clearTimeout(el._due); any = true;     // even one it already repeated: doing what it asks always makes it go
       el.classList.add('gone'); setTimeout(() => el.remove(), 460);
     }
     if (!any) return;
     ARCH.obey++;
+    tile._calm = performance.now() + 10000;   // having done what it asked, this one is left alone for a while
     heat = Math.max(0, heat - .18);
     quietUntil = performance.now() + 2500 + Math.random() * 2500;
   }
@@ -3122,6 +3125,7 @@ const Voice = (() => {
     if (!force && (state.locked || state.ritual || !state.started)) return;
     if (!force && performance.now() - state.t0 < GRACE) return;
     if (!force && performance.now() < quietUntil) return;   // the relief after giving in
+    if (!force && tile && tile._calm > performance.now()) return;
     if (!force && !room()) return;   // how many can be open at once grows only as you refuse them
     const now = performance.now(), pr = VOICE_PRIORITY[cat] || 1;
     const P = pace();
@@ -3143,6 +3147,10 @@ const Voice = (() => {
   }
   function poke() { lastInput = performance.now(); }
 
+  setInterval(() => {
+    const asked = new Set([...layer.children].filter(el => el._tile && !el.classList.contains('gone')).map(el => el._tile));
+    state.tiles.forEach(t => t.el.classList.toggle('called', asked.has(t)));
+  }, 250);
   // silence is also a trigger
   setInterval(() => {
     if (!state.started || state.locked || state.ritual) return;
@@ -3160,14 +3168,14 @@ const Voice = (() => {
   function revisit(tile) {
     const now = performance.now(), P = pace();
     const old = (tile.thoughts || []).filter(t => now - t[1] > 10000 * (1 - .8 * P));   // something you thought on an earlier visit
-    if (!old.length || state.locked || !room() || now - lastEcho < 6000 * (1 - .5 * P)) return;
+    if (!old.length || state.locked || !room() || now < quietUntil || tile._calm > now || now - lastEcho < 6000 * (1 - .5 * P)) return;
     lastEcho = now;
     const [x] = pick(old);
     fast(note([['v', x]], tile), [x]);
   }
   // a thought that doesn't wait for the one before it to finish
   function quick(cat, tile) {
-    if (!room()) return;
+    if (!room() || performance.now() < quietUntil || (tile && tile._calm > performance.now())) return;
     const x = fill(draw(cat));
     if (tile) (tile.thoughts = tile.thoughts || []).push([x, performance.now()]);
     fast(note([['v', x]], tile), [x]);
