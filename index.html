@@ -2928,62 +2928,23 @@ $('zout').addEventListener('click', () => { if (!blocked()) zoomCenter(1 / 1.5);
    Not insults: doubt, urgency, the feeling that something is still off.
    Every line is set off by something you just did, and it gets more insistent over time.
    ====================================================== */
-/* The voice lies. Sometimes it doubts a tile that is right, sometimes it praises one that is off,
-   sometimes it tells the truth — so it can never be used to tell how you're doing, and it can never be ignored. */
+/* Thoughts, not commentary. They don't tell you how you're doing — they pull at you.
+   body: lands on a tile you haven't touched yet, as if it hurts.  sym: after you touch one, it has to be evened out.
+   loop: when you keep going back — nothing you did counts. */
+const SYM = ['Touch it again so it’s equal on both sides.', 'You touched the left one. Now the right one.', 'You turned it twice. Turn it twice the other way.', 'It has to be even.', 'That one got more attention. Not fair.'];
+const LOOP = ['Again. Properly this time.', 'That one didn’t count.', 'Start over. In the right order.', 'Once more. Then it’s done. Once more.', 'You weren’t focused. Again.'];
+const BODY = ['This one really hurts.', 'I can feel this one in my teeth.', 'This one is itching.', 'Can’t you feel that one?', 'That one is looking at me.', 'It’s pulling. Over here.', 'This one won’t let me breathe.'];
+const both = a => ({ early: a, late: a });
 const VOICE_LINES = {
-  perfect: {                // you got a tile right — it won't let you have it
-    early: ['Is it, though?', 'That one’s off.', 'Look at the left edge.', 'Turn it once more. Just once.', 'It was better before.'],
-    late:  ['It moved while you were looking at it.', 'Wrong. You know it’s wrong.', 'Anyone else would see it.', 'You’re not leaving it like that.', 'Off. It’s off.']
-  },
-  check: {                  // you touched a tile that was already right
-    early: ['Check the one next to it too.', 'Did you check it properly?', 'Once more, then you can stop.', 'You missed something.'],
-    late:  ['You checked it wrong.', 'That didn’t count. Again.', 'What if this is the one?', 'You already know you’ll come back to it.']
-  },
-  break: {                  // your fix broke one that was right
-    early: ['Now look what you did.', 'That was the only right one.', 'You ruined it.', 'Put it back. Exactly how it was.'],
-    late:  ['You can’t remember how it was.', 'You keep breaking it.', 'It’s spreading because of you.']
-  },
-  near: {                   // a hair off — it tells you it's fine
-    early: ['Perfect. Leave it.', 'That’s it.', 'Nobody would notice.', 'Good enough?'],
-    late:  ['That’s right. Isn’t it?', 'Leave it. Leave it. No —', 'It’s fine. It’s fine. It’s not fine.', 'You’ll notice it later.']
-  },
-  stuck: {                  // the same tile, again and again
-    early: ['Again.', '{n} times. One more.', 'The next one will be right.', 'This time for real.'],
-    late:  ['{n}. Make it an even number.', 'Again. Again. Again.', 'It has to feel right. It doesn’t.', 'You can stop whenever you want.']
-  },
-  better: {                 // closer, not right
-    early: ['Not that way.', 'Closer? Are you sure?', 'Almost. Almost is worse than off.', 'Other way.', 'You overdid it.', 'Hm.'],
-    late:  ['Almost is the worst.', 'Not yet. Not yet.', 'Keep going. Don’t stop.', 'You were closer a second ago.', 'Too far. Not far enough.']
-  },
-  worse: {                  // you made it worse — it cheers you on
-    early: ['Better.', 'Yes. Like that.', 'Keep turning.', 'Good. A little more.', 'Almost there.', 'There.'],
-    late:  ['Better. No.', 'Further. Go on.', 'That’s what you wanted, right?', 'You’re so close.', 'Don’t stop now.']
-  },
-  tug: {                    // the fix moved its partner
-    early: ['Something moved behind you.', 'Did you see that?', 'Not that one. The other one.'],
-    late:  ['Everything you touch moves something else.', 'Look. Over there. No, there.', 'Which one did you just break?']
-  },
-  almost: {                 // one left
-    early: ['One left. Or is it?', 'Count them again.'],
-    late:  ['Are you sure it’s only one?', 'Start again from the top. Just to be sure.']
-  },
-  idle: {                   // you stopped
-    early: ['Why did you stop?', 'You’re giving up on it?', 'It’s still there.', 'Just one more.'],
-    late:  ['You’ll think about this tonight.', 'You know which one it is.', 'Other people finish this.', 'It’s still there. It’s still there.']
-  },
-  long: {                   // the time you have spent
-    early: ['{time}. Still not right.', '{corr} corrections. None of them stuck.'],
-    late:  ['{time}. You were supposed to be somewhere.', 'Just a little longer. You said that before.']
-  },
-  expand: {                 // the board comes undone
-    early: ['Of course.', 'You knew it would.', 'From the beginning.'],
-    late:  ['Again. All of it.', 'It was never right.']
-  }
+  perfect: both(SYM), check: both(SYM), near: both(SYM), better: both(SYM), worse: both(SYM), tug: both(SYM), break: both(SYM),
+  stuck: both(LOOP), almost: both(LOOP), long: both(LOOP), expand: both(LOOP),
+  body: both(BODY),
+  idle: both(['If you leave it crooked, something bad will happen.'])
 };
 // not every touch gets a thought — it lands harder when you can't predict it
-const SOMETIMES = new Set(['perfect', 'check', 'near', 'stuck', 'better', 'worse', 'tug']);
-const VOICE_PRIORITY = { demo: 10, expand: 9, ritual: 8, stuck: 7, break: 6, tug: 6, near: 5, worse: 4, better: 4, perfect: 5, check: 5, almost: 4, idle: 3, long: 2 };
-const VOICE_EVERY = { demo: 0, expand: 0, ritual: 0, stuck: 2500, break: 2000, tug: 3000, near: 2000, worse: 2000, better: 2000, perfect: 1500, check: 2000, almost: 6000, idle: 6000, long: 30000 };
+const SOMETIMES = new Set(['perfect', 'check', 'near', 'stuck', 'better', 'worse', 'tug', 'body']);
+const VOICE_PRIORITY = { demo: 10, expand: 9, ritual: 8, stuck: 7, break: 6, tug: 6, near: 5, worse: 4, better: 4, perfect: 5, check: 5, almost: 4, idle: 3, long: 2, body: 4 };
+const VOICE_EVERY = { demo: 0, expand: 0, ritual: 0, stuck: 2500, break: 2000, tug: 3000, near: 2000, worse: 2000, better: 2000, perfect: 1500, check: 2000, almost: 6000, idle: 25000, long: 30000, body: 6000 };
 
 const Voice = (() => {
   const layer = document.createElement('div');
@@ -2997,15 +2958,15 @@ const Voice = (() => {
   const said = [];   // every thought so far — they come back
 
   let cur = null, timers = [], lastAt = 0, lastInput = performance.now();
-  const lastCat = {}, bags = {};
+  const lastCat = {}, bagOf = new Map();
   const clear = () => { timers.forEach(clearTimeout); timers = []; };
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
   function draw(cat) {
     const P = pace(), tier = P > .35 && Math.random() < P ? 'late' : 'early';
-    const k = cat + tier;
-    if (!bags[k] || !bags[k].length) bags[k] = [...VOICE_LINES[cat][tier]].sort(() => Math.random() - .5);
-    let t = bags[k].pop();
+    const src = VOICE_LINES[cat][tier];   // categories that share lines share one bag, so nothing repeats back to back
+    if (!bagOf.get(src) || !bagOf.get(src).length) bagOf.set(src, [...src].sort(() => Math.random() - .5));
+    let t = bagOf.get(src).pop();
     // later on it starts repeating itself inside a single thought
     if (P > .6 && Math.random() < (P - .6) * 1.2) t = `${t} ${t}`;
     return t;
@@ -3136,7 +3097,9 @@ const Voice = (() => {
   setInterval(() => {
     if (!state.started || state.locked || state.ritual) return;
     const now = performance.now();
-    if (now - lastInput > 4000) say('idle');
+    const fresh = state.tiles.filter(t => !t.fixes && t.el.isConnected);   // tiles you haven't touched yet
+    if (now - lastInput > 4000) { if (Math.random() < .3) say('idle'); else if (fresh.length) say('body', pick(fresh)); }
+    else if (fresh.length && Math.random() < .12 + pace() * .15) say('body', pick(fresh));   // now and then, one you haven't touched calls to you
     else if (now - state.t0 > 45000) say('long');
   }, 1000);
 
